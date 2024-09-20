@@ -7,6 +7,7 @@ abstract contract BridgeManager is IBridgeManager {
     // version
     uint8 public constant VERSION = 1;
 
+    // TODO: remove
     mapping(address => address) public bridgeByToken; // token => bridge contract
 
     function _sendMessage(address sender, address token, uint256 destChainId, uint256[] memory proof) internal {

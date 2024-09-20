@@ -6,12 +6,14 @@ import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.s
 contract Node is BridgeManager {
     using SafeERC20 for IERC20;
 
-    mapping(address => address) public nativeToWrapped;
+    mapping(address => address) public nativeToUnwrapped;
     mapping(address => bool) public isNative;
 
+    address public immutable zkerc20;
+
     constructor Node() {
-        // allow native coins to be wrapped
-        wrapToken(address(0));
+        zkerc20 = address(new ZKERC20());
+        isNative[address(0)] = true;
     }
 
 
@@ -20,9 +22,8 @@ contract Node is BridgeManager {
 
 
     function lock(address token, uint256 amount) external {
-        require(isNative[token], "Node: token is not native to this chain");
         IERC20(token).safeTransferFrom(msg.sender, address(this), amount);
-        // TODO
+        _lock(token, amount);
     }
 
 
@@ -33,8 +34,9 @@ contract Node is BridgeManager {
 
 
     function _lock(address token, uint256 amount) internal {
-        address wrappedToken = wrapToken(token);
-        //IZKERC20(wrappedToken).mint(msg.sender, amount);
+        require(token == address(0), "TEMPORARILY DISABLED"); // cuz address(0) could be treated as native coin on multiple chains
+        isNative[token] = true;
+        IZKERC20(zkerc20).mint(token, msg.sender, amount);
     }
 
 
@@ -43,21 +45,29 @@ contract Node is BridgeManager {
 
 
     function unlock(address token, uint256 amount, uint256[] memory proof) external {
-        require(isNative[token], "Node: token is not native to this chain");
+        IZKERC20(zkerc20).burn(token, msg.sender, amount, proof);
+        _unlock(token, amount);
+    }
 
-        IZKERC20(wrappedToken).burn(msg.sender, amount, proof);
 
-        if (token == address(0)) {
-            payable(msg.sender).transfer(amount);
+    function _unlock(address token, uint256 amount) internal {
+        // if the token is native to this chain
+        if (isNative[token]) {
+            if (token == address(0)) {
+                payable(msg.sender).transfer(amount);
+            } else {
+                IERC20(token).safeTransfer(msg.sender, amount);
+            }
         } else {
-            IERC20(token).safeTransfer(msg.sender, amount);
+            address unwrappedToken = unwrapToken(token);
+            IERC20(unwrappedToken).mint(msg.sender, amount);
         }
     }
 
 
+    // TODO: remove `token`
     function _receiveMessage(uint256 srcChainId, address token, uint256[] memory proof) internal override {
-        address wrappedToken = wrapToken(token);
-        IZKERC20(wrappedToken).transferFrom(proof);
+        IZKERC20(zkerc20).transferFrom(proof);
     }
 
 
@@ -65,12 +75,12 @@ contract Node is BridgeManager {
     // UTILITY FUNCTIONS
 
 
-    function wrapToken(address token) internal returns (address wrappedToken) {
-        wrappedToken = nativeToWrapped[token];
-        if (wrappedToken == address(0)) {
-            wrappedToken = new ZKERC20(token);
-            nativeToWrapped[token] = wrappedToken;
-            isNative[wrappedToken] = true;
+    function unwrapToken(address token) internal returns (address wrappedToken) {
+        unwrappedToken = nativeToUnwrapped[token];
+        if (unwrappedToken == address(0)) {
+            unwrappedToken = new ERC20(token);
+            nativeToUnwrapped[token] = unwrappedToken;
+            isNative[unwrappedToken] = true;
         }
     }
 }

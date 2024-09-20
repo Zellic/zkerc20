@@ -2,28 +2,29 @@ pragma solidity ^0.8.27;
 
 contract ZKERC20 is IZKERC20 {
     address public immutable node;
-    address public immutable token;
 
     modifier onlyNode() {
         require(msg.sender == node, "ZKERC20: caller is not the node");
         _;
     }
 
-    constructor(address _token) {
-        token = _token;
-    }
+    constructor() {}
 
 
     //////////////////////////
     // NODE-ONLY FUNCTIONS
     
 
-    function mint(address to, uint256 amount) external onlyNode {
+    function mint(address asset, address to, uint256 amount) external onlyNode {
         // TODO
     }
 
-    function burn(address from, uint256 amount, uint256[] memory proof) external onlyNode {
-        // TODO
+    function burn(address asset, address from, uint256 amount, uint256[] memory proof) external onlyNode {
+        // TODO: this will burn the entire balance, then mint the remaining balance
+    }
+
+    function burn(address asset, address from, uint256[] memory proof) external onlyNode {
+        // TODO: this will burn the entire balance
     }
 
 
@@ -31,7 +32,7 @@ contract ZKERC20 is IZKERC20 {
     // PUBLIC FUNCTIONS
 
 
-    function transfer(uint256[] memory proof) external {
+    function transferFrom(uint256[] memory proof) external {
         // TODO
     }
 }
