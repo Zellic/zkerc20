@@ -1,18 +1,19 @@
 pragma solidity ^0.8.27;
 
+import { Bridge } from "./Bridge.sol";
 import { OApp, Origin, MessagingFee } from "@layerzerolabs/lz-evm-oapp-v2/contracts/oapp/OApp.sol";
 
 contract LZBridge is Bridge, OApp {
-    constructor(BridgeManager _manager, address _endpoint)
+    constructor(address _manager, address _endpoint)
         Bridge(_manager) OApp(_endpoint, msg.sender) {}
 
 
     function _sendMessage(address sender, uint256 destChainId, bytes memory data) internal override {
         bytes memory options; // TODO
         _lzSend(
-            _dstEid,
-            _payload,
-            _options,
+            uint32(destChainId), // TODO: map to LZ chain ID
+            data,
+            options,
             MessagingFee(msg.value, 0), // (nativeFee, lzTokenFee)
             payable(sender) // refund addr
         );
@@ -42,7 +43,7 @@ contract LZBridge is Bridge, OApp {
     ///  - sender: The sender address on the src chain.
     ///  - nonce: The nonce of the message.
     /// @param _guid The unique identifier for the received LayerZero message.
-    /// @param _message The payload of the received message.
+    /// @param payload The payload of the received message.
     /// @param _executor The address of the executor for the received message.
     /// @param _extraData Additional arbitrary data provided by the corresponding executor.
     function _lzReceive(

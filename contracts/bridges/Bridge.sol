@@ -1,23 +1,23 @@
 pragma solidity ^0.8.27;
 
-import "./interface/IBridge.sol";
-import "./interface/IBridgeManager.sol";
+import "../interfaces/IBridge.sol";
+import "../interfaces/IBridgeManager.sol";
 
 abstract contract Bridge is IBridge {
-    BridgeManager public manager;
+    address public manager;
 
-    constructor(BridgeManager _manager) {
+    constructor(address _manager) {
         manager = _manager;
     }
 
-    function sendMessage(address sender, uint256 destChainId, bytes memory data) external {
-        require(msg.sender == address(manager), "Bridge: Only manager can send message");
+    function sendMessage(address sender, uint256 destChainId, bytes memory data) external payable {
+        require(msg.sender == manager, "Bridge: Only manager can send message");
         _sendMessage(sender, destChainId, data);
     }
 
-    function _sendMessage(uint256 destChainId, bytes memory data) private;
+    function _sendMessage(address sender, uint256 destChainId, bytes memory data) internal virtual;
 
-    function receiveMessage(uint256 srcChainId, bytes memory data) private {
-        manager.receiveMessage(srcChainId, data);
+    function receiveMessage(uint256 srcChainId, bytes memory data) internal {
+        IBridgeManager(manager).receiveMessage(srcChainId, data);
     }
 }

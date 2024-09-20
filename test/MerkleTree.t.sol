@@ -2,7 +2,7 @@
 pragma solidity ^0.8.27;
 
 import {Test, console} from "forge-std/Test.sol";
-import {MerkleTree} from "../src/MerkleTree.sol";
+import {MerkleTree} from "../contracts/MerkleTree.sol";
 
 library Hash {
     function hash(
