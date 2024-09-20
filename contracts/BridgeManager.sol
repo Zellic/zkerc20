@@ -26,9 +26,6 @@ abstract contract BridgeManager is IBridgeManager {
 
         require(version == VERSION, "Invalid version");
         _receiveMessage(srcChainId, token, proof);
-
-        // TODO
-        // [...]
     }
 
     function _receiveMessage(uint256 srcChainId, address token, uint256[] memory proof) internal virtual;

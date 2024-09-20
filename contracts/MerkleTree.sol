@@ -35,9 +35,9 @@ abstract contract MerkleTree {
         uint256 current = value;
         for (uint256 i = 0; i < proof.length; i++) {
             if (index % 2 == 0) {
-                current = _hash(current, proof[i]);
+                current = hash(current, proof[i]);
             } else {
-                current = _hash(proof[i], current);
+                current = hash(proof[i], current);
             }
             index >>= 1;
         }
@@ -60,4 +60,6 @@ abstract contract MerkleTree {
         uint256 left,
         uint256 right
     ) public virtual pure returns (uint256);
+
+    function _hash(uint256 value) public virtual pure returns (uint256);
 }
