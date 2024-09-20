@@ -9,7 +9,7 @@ abstract contract BridgeManager is IBridgeManager {
 
     mapping(address => address) public bridgeByToken; // token => bridge contract
 
-    function sendMessage(address sender, address token, uint256 destChainId, uint256[] memory proof) internal {
+    function _sendMessage(address sender, address token, uint256 destChainId, uint256[] memory proof) internal {
         address bridge = bridgeByToken[token];
         require(bridge != address(0), "Bridge not configured");
 
@@ -24,9 +24,12 @@ abstract contract BridgeManager is IBridgeManager {
         require(bridgeByToken[token] == msg.sender, "Unauthorized bridge");
 
         require(version == VERSION, "Invalid version");
+        _receiveMessage(srcChainId, token, proof);
 
         // TODO
         // [...]
     }
+
+    function _receiveMessage(uint256 srcChainId, address token, uint256[] memory proof) internal virtual;
 }
 
