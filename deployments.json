@@ -1,0 +1,15 @@
+{
+    "eth-sepolia": {
+        "endpoint": "http://127.0.0.1:8545/",
+        "address": "0x4CbFBec8643B7aaC22EBd875AE8c11c94B7A7833",
+        "deployer": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+        "memecoin": "0x881043D49afA77982925F94Ce97f92Ea41b1b1D4",
+        "chainId": 10,
+        "lzChainId": 40161,
+        "ccipChainId": 1,
+        "lzAddr": "0xA2ECeA4F1f0631024e5f37b65673479E6AC9EEEE",
+        "ccipAddr": "0xFAb604703a674d7d16a72B6d1d93Ac6cCC69fEEC",
+        "nodeAddr": "0x97857753079025392a67A71FC7D0164d9dd75c20",
+        "hashContracts": "0x7AD3983a01ab3C128C6f2883bce694c3119EB0a8"
+    }
+}
