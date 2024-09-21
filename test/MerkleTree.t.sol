@@ -21,8 +21,8 @@ contract KeccakMerkleTree is MerkleTree(3) {
         return Hash.hash(left, right);
     }
 
-    function insert(uint256 value, uint256[] memory proof) public {
-        super._insert(value, proof);
+    function insert(uint256 value) public {
+        super._insert(value);
     }
 }
 
@@ -34,38 +34,24 @@ contract MerkleTreeTest is Test {
 
     function test_add_one() public {
         KeccakMerkleTree tree = new KeccakMerkleTree();
-        tree.insert(1, new uint256[](0));
+        tree.insert(1);
 
         assertEq(tree.root(), Hash.hash(Hash.hash(Hash.hash(1, 0), 0), 0));
     }
 
     function test_add_two() public {
         KeccakMerkleTree tree = new KeccakMerkleTree();
-        tree.insert(1, new uint256[](0));
-
-        uint256[] memory proof = new uint256[](3);
-        proof[0] = 1;
-        proof[1] = 0;
-        proof[2] = 0;
-        tree.insert(2, proof);
+        tree.insert(1);
+        tree.insert(2);
 
         assertEq(tree.root(), Hash.hash(Hash.hash(Hash.hash(1, 2), 0), 0));
     }
 
     function test_add_three() public {
         KeccakMerkleTree tree = new KeccakMerkleTree();
-        tree.insert(1, new uint256[](0));
-
-        uint256[] memory proof = new uint256[](3);
-        proof[0] = 1;
-        proof[1] = 0;
-        proof[2] = 0;
-        tree.insert(2, proof);
-
-        proof = new uint256[](2);
-        proof[0] = Hash.hash(1, 2);
-        proof[1] = 0;
-        tree.insert(3, proof);
+        tree.insert(1);
+        tree.insert(2);
+        tree.insert(3);
 
         assertEq(
             tree.root(),
@@ -81,50 +67,14 @@ contract MerkleTreeTest is Test {
 
     function test_saturate() public {
         KeccakMerkleTree tree = new KeccakMerkleTree();
-        tree.insert(1, new uint256[](0));
-
-        uint256[] memory proof = new uint256[](3);
-        proof[0] = 1;
-        proof[1] = 0;
-        proof[2] = 0;
-        tree.insert(2, proof);
-
-        proof = new uint256[](2);
-        proof[0] = Hash.hash(1, 2);
-        proof[1] = 0;
-        tree.insert(3, proof);
-
-        proof = new uint256[](3);
-        proof[0] = 3;
-        proof[1] = Hash.hash(1, 2);
-        proof[2] = 0;
-        tree.insert(4, proof);
-
-        uint256 leftSubtree = Hash.hash(
-            Hash.hash(1, 2),
-            Hash.hash(3, 4)
-        );
-
-        proof = new uint256[](1);
-        proof[0] = leftSubtree;
-        tree.insert(5, proof);
-
-        proof = new uint256[](3);
-        proof[0] = 5;
-        proof[1] = 0;
-        proof[2] = leftSubtree;
-        tree.insert(6, proof);
-
-        proof = new uint256[](2);
-        proof[0] = Hash.hash(5, 6);
-        proof[1] = leftSubtree;
-        tree.insert(7, proof);
-
-        proof = new uint256[](3);
-        proof[0] = 7;
-        proof[1] = Hash.hash(5, 6);
-        proof[2] = leftSubtree;
-        tree.insert(8, proof);
+        tree.insert(1);
+        tree.insert(2);
+        tree.insert(3);
+        tree.insert(4);
+        tree.insert(5);
+        tree.insert(6);
+        tree.insert(7);
+        tree.insert(8);
 
         assertEq(
             tree.root(),

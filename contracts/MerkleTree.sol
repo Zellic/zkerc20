@@ -10,31 +10,53 @@ abstract contract MerkleTree {
     mapping(uint256 => uint256) public filledSubtrees; // https://www.zellic.io/blog/how-does-tornado-cash-work/#setup
 
     constructor(uint8 _targetHeight) {
+        require(_targetHeight > 0, "Invalid target height");
+        require(_targetHeight < 32, "Invalid target height"); // you'd just need to add more to zeros()
+
         targetHeight = _targetHeight;
+
+        for (uint i = 0; i < targetHeight; i++) {
+            filledSubtrees[i] = 0;
+        }
     }
 
-    function _insert(uint256 value, uint256[] memory proof) internal {
-        require(proof.length <= targetHeight, "Invalid proof length");
+
+    function _insert(uint256 value) public {
         require(transactions < 2**targetHeight, "Tree is full");
 
-        uint256 elevation = targetHeight - proof.length;
-        verifyProof(root, 0, transactions >> elevation, proof);
+        uint256 index = transactions;
 
-        uint256[] memory newProof = new uint256[](targetHeight);
-        for (uint i = 0; i < elevation; i++) newProof[i] = 0;
-        for (uint i = 0; i < proof.length; i++) {
-            newProof[i + elevation] = proof[i];
+        uint256 current = value;
+        for (uint256 i = 0; i < targetHeight; i++) {
+            if (index % 2 == 0) {
+                filledSubtrees[i] = current;
+                current = _hash(current, uint256(0));
+            } else {
+                current = _hash(filledSubtrees[i], current);
+            }
+            index >>= 1;
         }
 
-        root = buildProof(value, transactions, newProof);
+        root = current;
         transactions++;
     }
+
 
     function buildProof(
         uint256 value,
         uint256 index,
         uint256[] memory proof
     ) public pure returns (uint256) {
+        return 0;
+    }
+
+
+    function verifyProof(
+        uint256 tree,
+        uint256 value,
+        uint256 index,
+        uint256[] memory proof
+    ) public pure {
         uint256 current = value;
         for (uint256 i = 0; i < proof.length; i++) {
             if (index % 2 == 0) {
@@ -44,20 +66,10 @@ abstract contract MerkleTree {
             }
             index >>= 1;
         }
-        return current;
+
+        require(current == tree, "Invalid proof");
     }
 
-    function verifyProof(
-        uint256 tree,
-        uint256 value,
-        uint256 index,
-        uint256[] memory proof
-    ) public pure {
-        require(
-            buildProof(value, index, proof) == tree,
-            "Invalid proof"
-        );
-    }
 
     function _hash(
         uint256 left,
