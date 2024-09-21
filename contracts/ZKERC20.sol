@@ -35,10 +35,12 @@ contract ZKERC20 is IZKERC20, MerkleTree {
         emit Mint(asset, to, amount);
     }
 
+
     function mint(uint256 commitment) external onlyNode {
         _insert(commitment);
         emit Mint();
     }
+
 
     function burn(address asset, address from, uint256 amount, uint256 nullifier, uint256[] memory proof) external onlyNode {
         require(!usedNullifiers[nullifier], "ZKERC20: nullifier already used");
@@ -58,6 +60,10 @@ contract ZKERC20 is IZKERC20, MerkleTree {
         // TODO
         emit Transfer();
     }
+
+
+    //////////////////////////
+    // ERC20-TYPE FUNCTIONS
 
 
     function name() public pure returns (string memory) {

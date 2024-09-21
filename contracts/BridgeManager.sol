@@ -14,7 +14,7 @@ abstract contract BridgeManager is IBridgeManager, Ownable {
 
     function _sendMessage(uint8 bridgeId, address sender, address token, uint256 destChainId, uint256 commitment) internal {
         address bridge = bridgeToContract[bridgeId];
-        require(bridge != address(0), "Bridge not configured");
+        require(bridge != address(0), "Node: bridge not configured");
 
         bytes memory data = abi.encode(VERSION, commitment);
         IBridge(bridge).sendMessage{value: msg.value}(sender, destChainId, data);
@@ -25,9 +25,9 @@ abstract contract BridgeManager is IBridgeManager, Ownable {
         (uint8 version, uint256 commitment) = abi.decode(data, (uint8, uint256));
 
         uint8 bridgeId = contractToBridge[msg.sender];
-        require(bridgeId != 0, "Bridge not configured");
+        require(bridgeId != 0, "Node: bridge not configured");
 
-        require(version == VERSION, "Invalid version");
+        require(version == VERSION, "Node: invalid version");
 
         _receiveMessage(srcChainId, commitment);
     }
@@ -40,9 +40,10 @@ abstract contract BridgeManager is IBridgeManager, Ownable {
     // CONFIGURATION
 
     function configureBridge(uint8 bridgeId, address bridge) external onlyOwner {
-        require(bridgeId != 0, "Invalid bridge id"); // 0 must mean unconfigured
-        require(bridgeToContract[bridgeId] == address(0), "Bridge already configured");
-        require(contractToBridge[bridge] == 0, "Bridge contract already configured");
+        require(bridgeId != 0, "Node: invalid bridge id"); // 0 must mean unconfigured
+        require(bridge != address(0), "Node: invalid bridge address");
+        require(bridgeToContract[bridgeId] == address(0), "Node: bridge already configured");
+        require(contractToBridge[bridge] == 0, "Node:bridge contract already configured");
 
         bridgeToContract[bridgeId] = bridge;
         contractToBridge[bridge] = bridgeId;

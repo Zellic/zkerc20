@@ -2,37 +2,36 @@ pragma solidity ^0.8.27;
 
 import { Bridge } from "./Bridge.sol";
 import { OApp, Origin, MessagingFee } from "@layerzerolabs/lz-evm-oapp-v2/contracts/oapp/OApp.sol";
+//import { OptionsBuilder } from "@layerzerolabs/lz-evm-oapp-v2/contracts/oapp/libs/OptionsBuilder.sol";
 
 contract LZBridge is Bridge, OApp {
+    mapping(uint256 => uint32) public chainIdToEid;
+
     constructor(address _deployer, address _manager, address _endpoint)
         Bridge(_manager) OApp(_endpoint, _deployer) {}
 
 
     function _sendMessage(address sender, uint256 destChainId, bytes memory data) internal override {
-        bytes memory options; // TODO
+        require(chainIdToEid[destChainId] != 0, "LZBridge: destination chain not configured");
         _lzSend(
-            uint32(destChainId), // TODO: map to LZ chain ID
+            chainIdToEid[destChainId], // TODO: map to LZ chain ID
             data,
-            options,
+            bytes(""),
+            //OptionsBuilder.newOptions(),
             MessagingFee(msg.value, 0), // (nativeFee, lzTokenFee)
             payable(sender) // refund addr
         );
     }
 
 
-    /// @notice Estimates the gas associated with sending a message.
-    /// @param _dstEid The endpoint ID of the destination chain.
-    /// @param _message The message to be sent.
-    /// @param _options The message execution options (e.g. gas to use on destination).
-    /// @return nativeFee Estimated gas fee in native gas.
-    /// @return lzTokenFee Estimated gas fee in ZRO token.
     function estimateFee(
-        uint32 _dstEid,
-        string memory _message,
-        bytes calldata _options
+        uint256 _destChainId,
+        bytes memory _payload
     ) public view returns (uint256 nativeFee, uint256 lzTokenFee) {
-        bytes memory _payload = abi.encode(_message);
-        MessagingFee memory fee = _quote(_dstEid, _payload, _options, false);
+        require(chainIdToEid[_destChainId] != 0, "LZBridge: destination chain not configured");
+
+        bytes memory _options;
+        MessagingFee memory fee = _quote(chainIdToEid[_destChainId], _payload, _options, false);
         return (fee.nativeFee, fee.lzTokenFee);
     }
 
@@ -54,5 +53,11 @@ contract LZBridge is Bridge, OApp {
         bytes calldata _extraData
     ) internal override {
         receiveMessage(_origin.srcEid, payload);
+    }
+
+
+    function configureChainId(uint256 chainId, uint32 eid) public onlyOwner {
+        require(eid != 0, "LZBridge: invalid eid");
+        chainIdToEid[chainId] = eid;
     }
 }

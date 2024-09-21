@@ -10,8 +10,8 @@ import { IZKERC20 } from "./interfaces/IZKERC20.sol";
 contract Node is BridgeManager {
     using SafeERC20 for IERC20;
 
-    mapping(address => address) public nativeToUnwrapped;
-    mapping(address => address) public unwrappedToNative;
+    mapping(address => address) public nativeToUnwrapped; // the original token's address => the unwrapped token address
+    mapping(address => address) public unwrappedToNative; // the unwrapped token address => the original token address
     mapping(address => bool) public isNative; // XXX: obviously, this won't be sync'd across chains and could be race con'd
 
     address public immutable zkerc20;
@@ -67,9 +67,17 @@ contract Node is BridgeManager {
     }
 
 
-    // TODO: remove `token`
+    //////////////////////////
+    // BRDIGING
+
+
     function _receiveMessage(uint256 srcChainId, uint256 commitment) internal override {
         IZKERC20(zkerc20).mint(commitment);
+    }
+
+
+    function bridge(uint8 bridgeId, uint256 nullifier, uint256[] memory proof) external {
+        // TODO
     }
 
 
