@@ -1,7 +1,7 @@
 pragma solidity ^0.8.27;
 
-import {MerkleTree} from "./MerkleTree.sol";
-import {Groth16Verifier} from "@circuits/verifier.sol";
+import { MerkleTree } from "./MerkleTree.sol";
+import { Groth16Verifier } from "@circuits/verifier.sol";
 import {
     IPoseidonTwo,
     IPoseidonFour,

@@ -12,7 +12,7 @@ abstract contract BridgeManager is IBridgeManager, Ownable {
     mapping(address => uint8) public contractToBridge; // bridge contract => bridge id
 
 
-    function _sendMessage(uint8 bridgeId, address sender, address token, uint256 destChainId, uint256 commitment) internal {
+    function _sendMessage(uint8 bridgeId, address sender, uint256 destChainId, uint256 commitment) internal {
         address bridge = bridgeToContract[bridgeId];
         require(bridge != address(0), "Node: bridge not configured");
 

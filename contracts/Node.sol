@@ -26,6 +26,7 @@ contract Node is BridgeManager {
 
 
     function lock(address token, uint256 amount, uint256 salt) external returns (uint256 receipt) {
+        // take the user's original ERC20 tokens
         IERC20(token).safeTransferFrom(msg.sender, address(this), amount);
 
         address originalToken = unwrappedToNative[token];
@@ -72,10 +73,13 @@ contract Node is BridgeManager {
 
 
     function _unlock(address token, uint256 amount) internal {
-        // if the token is native to this chain
         if (isNative[token]) {
+            // the token is native to this chain.
+            // simply transfer the token to the user
             IERC20(token).safeTransfer(msg.sender, amount);
         } else {
+            // the token is not native to this chain.
+            // we need to make a "fake" token
             address unwrappedToken = _unwrapToken(token);
             IERC20(unwrappedToken).transfer(msg.sender, amount);
         }
@@ -83,7 +87,7 @@ contract Node is BridgeManager {
 
 
     //////////////////////////
-    // BRDIGING
+    // BRIDGING
 
 
     function _receiveMessage(uint256 srcChainId, uint256 commitment) internal override {
@@ -93,10 +97,12 @@ contract Node is BridgeManager {
 
     function bridge(
         uint8 bridgeId,
+        address receiver,
         uint256 nullifier,
-        uint256[] memory proof
-    ) external {
+        uint256[] memory proof,
         // TODO
+    ) external {
+        BridgeManager._sendMessage(...);
     }
 
 
