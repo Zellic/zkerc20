@@ -46,7 +46,7 @@ contract LZBridgeTest is Test {
 
         aBridge = new CCIPBridgeMock(address(this), address(this), address(router));
         bBridge = new CCIPBridgeMock(address(this), address(this), address(router));
-        aBridge.configureChainId(CHAIN_ID_B, chainSelector);
+        aBridge.configureChainId(CHAIN_ID_B, chainSelector, address(bBridge));
         // skipping bBridge configuration for now
     }
 
@@ -58,7 +58,7 @@ contract LZBridgeTest is Test {
         uint256 _receiveCounterBefore = receiveCounter;
 
         vm.prank(alice);
-        aLZBridge.sendMessage{ value: fee }(CHAIN_ID_B, payload);
+        aBridge.sendMessage{ value: fee }(CHAIN_ID_B, payload);
 
         uint256 _receiveCounterAfter = receiveCounter;
         assertEq(_receiveCounterAfter, _receiveCounterBefore + 1, "receiveCounter not incremented");

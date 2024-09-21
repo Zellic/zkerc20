@@ -13,9 +13,7 @@ remappings = [
     "solidity-bytes-utils/contracts=lib/solidity-bytes-utils/contracts/",
     "@layerzerolabs/lz-evm-v1-0.7/=node_modules/@layerzerolabs/lz-evm-v1-0.7/",
     "hardhat-deploy/solc_0.8/=node_modules/hardhat-deploy/solc_0.8/",
-    "@chainlink/contracts/=node_modules/@chainlink/contracts",
-    "@chainlink/contracts-ccip/=node_modules/@chainlink/contracts-ccip",
-    "@chainlink/local=node_modules/@chainlink/local"
+    "@chainlink/contracts-ccip/=lib/chainlink-local/lib/ccip/contracts",
 ]
 
 

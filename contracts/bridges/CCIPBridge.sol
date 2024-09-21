@@ -1,21 +1,24 @@
 pragma solidity ^0.8.27;
 
 import { Bridge } from "./Bridge.sol";
-import {LinkTokenInterface} from "@chainlink/contracts/src/v0.8/interfaces/LinkTokenInterface.sol";
-import {IRouterClient} from "@chainlink/contracts-ccip/src/v0.8/ccip/interfaces/IRouterClient.sol";
-import {CCIPReceiver} from "@chainlink/contracts-ccip/src/v0.8/ccip/applications/CCIPReceiver.sol";
-import {Client} from "@chainlink/contracts-ccip/src/v0.8/ccip/libraries/Client.sol";
+import { LinkTokenInterface } from "@chainlink/contracts/src/v0.8/interfaces/LinkTokenInterface.sol";
+import { IRouterClient } from "@chainlink/contracts-ccip/src/v0.8/ccip/interfaces/IRouterClient.sol";
+import { CCIPReceiver } from "@chainlink/contracts-ccip/src/v0.8/ccip/applications/CCIPReceiver.sol";
+import { Client } from "@chainlink/contracts-ccip/src/v0.8/ccip/libraries/Client.sol";
+import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 
-contract CCIPBridge is Bridge, CCIPSender, CCIPReceiver {
-    using OptionsBuilder for bytes;
-
+contract CCIPBridge is Bridge, CCIPReceiver, Ownable {
     mapping(uint256 => uint64) public chainIdToSelector;
     mapping(uint64 => uint256) public selectorToChainId;
     mapping(uint256 => address) public chainIdToCounterparty;
 
+    address public router;
+
 
     constructor(address _deployer, address _manager, address _router)
-        Bridge(_manager) CCIPReceiver(_router) {}
+        Bridge(_manager) CCIPReceiver(_router) {
+        router = _router;
+    }
 
 
     function _sendMessage(address sender, uint256 destChainId, bytes memory data) internal override {
@@ -23,12 +26,12 @@ contract CCIPBridge is Bridge, CCIPSender, CCIPReceiver {
 
         Client.EVM2AnyMessage memory message = _createPayload(destChainId, data);
 
-        uint256 fee = IRouterClient(i_router).getFee(
+        uint256 fee = IRouterClient(router).getFee(
             chainIdToSelector[destChainId],
             message
         );
 
-        IRouterClient(i_router).ccipSend{value: fee}(
+        IRouterClient(router).ccipSend{value: fee}(
             chainIdToSelector[destChainId],
             message
         );
@@ -38,9 +41,9 @@ contract CCIPBridge is Bridge, CCIPSender, CCIPReceiver {
     function _ccipReceive(
         Client.Any2EVMMessage memory message
     ) internal override {
-        uint32 latestSourceChainSelector = message.sourceChainSelector;
+        uint64 latestSourceChainSelector = message.sourceChainSelector;
         address latestSender = abi.decode(message.sender, (address));
-        bytes memory latestMessage = abi.decode(message.data, (bytes memory));
+        bytes memory latestMessage = abi.decode(message.data, (bytes));
         
         uint256 sourceChainId = selectorToChainId[latestSourceChainSelector];
         require(sourceChainId != 0, "CCIPBridge: source chain not configured");
@@ -54,7 +57,7 @@ contract CCIPBridge is Bridge, CCIPSender, CCIPReceiver {
         bytes memory payload
     ) public view override returns (uint256) {
         return IRouterClient(router).getFee(
-            chainIdToSelector[_destChainId],
+            chainIdToSelector[destChainId],
             _createPayload(destChainId, payload)
         );
     }
