@@ -5,22 +5,29 @@ require('dotenv').config()
 
 
 async function deployAndSetup() {
-    let lzEndpoint = '0x1234567890123456789012345678901234567890'; // TODO
-    let ccipRouter = '0x1234567890123456789012345678901234567890'; // TODO
-
     // array of providers, where provider has the network name and chain id
     let providers = [
         {
-            name: 'goerli',
+            name: 'eth-sepolia',
+            endpoint: 'http://127.0.0.1:8545/',
             chainId: 10,
-            lzChainId: 1, // TODO
-            ccipChainId: 1 // TODO
+            lzEndpoint: '0x6EDCE65403992e310A62460808c4b910D972f10f',
+            lzChainId: 40161,
+            ccipRouter: '0x1234567890123456789012345678901234567890', // TODO
+            ccipChainId: 1, // TODO
+            provider: null,
+            wallet: null
         },
         {
-            name: 'rinkeby',
+            name: 'linea-sepolia',
+            endpoint: 'http://127.0.0.1:8546/',
             chainId: 20,
-            lzChainId: 1, // TODO
-            ccipChainId: 1 // TODO
+            lzEndpoint: '0x6EDCE65403992e310A62460808c4b910D972f10f',
+            lzChainId: 40287,
+            ccipRouter: '0x1234567890123456789012345678901234567890', // TODO
+            ccipChainId: 1, // TODO
+            provider: null,
+            wallet: null
         }
     ];
 
@@ -43,7 +50,7 @@ async function deployAndSetup() {
 
         // Deploy the contract
         const Deploy = await ethers.getContractFactory("Deploy", p.wallet);
-        p.deploy = await Deploy.deploy(lzEndpoint, ccipRouter);
+        p.deploy = await Deploy.deploy(p.lzEndpoint, p.ccipRouter);
         console.log("... deploying to address:", p.deploy.address);
         console.log("... transaction hash:", p.deploy.deployTransaction.hash);
 
