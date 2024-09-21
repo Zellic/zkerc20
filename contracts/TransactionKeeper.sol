@@ -89,7 +89,7 @@ contract TransactionKeeper is MerkleTree(30) {
         rightIndex = _insert(rightCommitment);
     }
 
-    function split(
+    function bridge(
         address spender,
         uint256 leftCommitment,
         uint256 rightCommitment,
