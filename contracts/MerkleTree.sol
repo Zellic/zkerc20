@@ -7,12 +7,15 @@ abstract contract MerkleTree {
     uint256 public root = 0;
     uint256 public transactions = 0;
 
+    mapping(uint256 => uint256) public filledSubtrees; // https://www.zellic.io/blog/how-does-tornado-cash-work/#setup
+
     constructor(uint8 _targetHeight) {
         targetHeight = _targetHeight;
     }
 
     function _insert(uint256 value, uint256[] memory proof) internal {
         require(proof.length <= targetHeight, "Invalid proof length");
+        require(transactions < 2**targetHeight, "Tree is full");
 
         uint256 elevation = targetHeight - proof.length;
         verifyProof(root, 0, transactions >> elevation, proof);
@@ -35,9 +38,9 @@ abstract contract MerkleTree {
         uint256 current = value;
         for (uint256 i = 0; i < proof.length; i++) {
             if (index % 2 == 0) {
-                current = hash(current, proof[i]);
+                current = _hash(current, proof[i]);
             } else {
-                current = hash(proof[i], current);
+                current = _hash(proof[i], current);
             }
             index >>= 1;
         }
@@ -60,6 +63,4 @@ abstract contract MerkleTree {
         uint256 left,
         uint256 right
     ) public virtual pure returns (uint256);
-
-    function _hash(uint256 value) public virtual pure returns (uint256);
 }

@@ -11,10 +11,6 @@ library Hash {
     ) public pure returns (uint256) {
         return uint256(keccak256(abi.encodePacked(left, right)));
     }
-
-    function hash(uint256 value) public pure returns (uint256) {
-        return uint256(keccak256(value));
-    }
 }
 
 contract KeccakMerkleTree is MerkleTree(3) {
@@ -23,10 +19,6 @@ contract KeccakMerkleTree is MerkleTree(3) {
         uint256 right
     ) public override pure returns (uint256) {
         return Hash.hash(left, right);
-    }
-
-    function _hash(uint256 value) public override pure returns (uint256) {
-        return Hash.hash(value);
     }
 
     function insert(uint256 value, uint256[] memory proof) public {

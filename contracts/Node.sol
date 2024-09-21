@@ -1,7 +1,11 @@
 pragma solidity 0.8.27;
 
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import { ERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import { BridgeManager } from "./BridgeManager.sol";
+import { ZKERC20 } from "./ZKERC20.sol";
+import { IZKERC20 } from "./interfaces/IZKERC20.sol";
 
 contract Node is BridgeManager {
     using SafeERC20 for IERC20;
@@ -12,7 +16,7 @@ contract Node is BridgeManager {
 
     address public immutable zkerc20;
 
-    constructor Node() {
+    constructor() {
         zkerc20 = address(new ZKERC20());
     }
 
@@ -58,7 +62,7 @@ contract Node is BridgeManager {
             IERC20(token).safeTransfer(msg.sender, amount);
         } else {
             address unwrappedToken = _unwrapToken(token);
-            IERC20(unwrappedToken).mint(msg.sender, amount);
+            IERC20(unwrappedToken).transfer(msg.sender, amount);
         }
     }
 
@@ -73,10 +77,13 @@ contract Node is BridgeManager {
     // UTILITY FUNCTIONS
 
 
-    function _unwrapToken(address token) internal returns (address wrappedToken) {
+    function _unwrapToken(address token) internal returns (address unwrappedToken) {
         unwrappedToken = nativeToUnwrapped[token];
         if (unwrappedToken == address(0)) {
-            unwrappedToken = new ERC20(token);
+            string memory origName = ERC20(token).name();
+            string memory newName = string(abi.encodePacked("uwZK", origName));
+
+            unwrappedToken = address(new ERC20(newName, ERC20(token).symbol()));
             nativeToUnwrapped[token] = unwrappedToken;
             unwrappedToNative[unwrappedToken] = token;
             isNative[unwrappedToken] = true;
