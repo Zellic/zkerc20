@@ -2,9 +2,11 @@ pragma solidity ^0.8.27;
 
 import { Bridge } from "./Bridge.sol";
 import { OApp, Origin, MessagingFee } from "@layerzerolabs/lz-evm-oapp-v2/contracts/oapp/OApp.sol";
-//import { OptionsBuilder } from "@layerzerolabs/lz-evm-oapp-v2/contracts/oapp/libs/OptionsBuilder.sol";
+import { OptionsBuilder } from "@layerzerolabs/lz-evm-oapp-v2/contracts/oapp/libs/OptionsBuilder.sol";
 
 contract LZBridge is Bridge, OApp {
+    using OptionsBuilder for bytes;
+
     mapping(uint256 => uint32) public chainIdToEid;
 
     constructor(address _deployer, address _manager, address _endpoint)
@@ -16,8 +18,7 @@ contract LZBridge is Bridge, OApp {
         _lzSend(
             chainIdToEid[destChainId], // TODO: map to LZ chain ID
             data,
-            bytes(""),
-            //OptionsBuilder.newOptions(),
+            _buildOptions(),
             MessagingFee(msg.value, 0), // (nativeFee, lzTokenFee)
             payable(sender) // refund addr
         );
@@ -30,7 +31,7 @@ contract LZBridge is Bridge, OApp {
     ) public view returns (uint256 nativeFee, uint256 lzTokenFee) {
         require(chainIdToEid[_destChainId] != 0, "LZBridge: destination chain not configured");
 
-        bytes memory _options;
+        bytes memory _options = _buildOptions();
         MessagingFee memory fee = _quote(chainIdToEid[_destChainId], _payload, _options, false);
         return (fee.nativeFee, fee.lzTokenFee);
     }
@@ -53,6 +54,12 @@ contract LZBridge is Bridge, OApp {
         bytes calldata _extraData
     ) internal override {
         receiveMessage(_origin.srcEid, payload);
+    }
+
+    function _buildOptions() private pure returns (bytes memory) {
+        return OptionsBuilder.newOptions()
+            // (gas limit, msg.value)
+            .addExecutorLzReceiveOption(2000000, 0); // TODO
     }
 
 

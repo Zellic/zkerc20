@@ -74,4 +74,8 @@ contract LZBridgeTest is TestHelper {
         // @param _dstAddress The OApp address on the destination chain.
         verifyPackets(bEid, addressToBytes32(address(bLZBridge)));
     }
+
+    function receiveMessage(uint256 srcChainId, bytes memory data) external {
+        //console.log("Received message from chain %d", srcChainId);
+    }
 }
