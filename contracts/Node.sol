@@ -17,7 +17,7 @@ contract Node is BridgeManager {
     address public immutable zkerc20;
 
     constructor() {
-        zkerc20 = address(new ZKERC20());
+        zkerc20 = address(new ZKERC20{salt: bytes32(uint256(0xdeadbeef))}());
     }
 
 
@@ -49,9 +49,9 @@ contract Node is BridgeManager {
     // UNLOCKING
 
 
-    // TODO: support burning entire note too
-    function unlock(address token, uint256 amount, uint256[] memory proof) external {
-        IZKERC20(zkerc20).burn(token, msg.sender, amount, proof);
+    // TODO: support burning partial note too?
+    function unlock(address token, uint256 amount, uint256 nullifier, uint256[] memory proof) external {
+        IZKERC20(zkerc20).burn(token, msg.sender, amount, nullifier, proof);
         _unlock(token, amount);
     }
 
@@ -80,14 +80,19 @@ contract Node is BridgeManager {
     function _unwrapToken(address token) internal returns (address unwrappedToken) {
         unwrappedToken = nativeToUnwrapped[token];
         if (unwrappedToken == address(0)) {
+            // need to deploy a new unwrapped ZK token
             string memory origName = ERC20(token).name();
             string memory newName = string(abi.encodePacked("uwZK", origName));
+            unwrappedToken = address(new ERC20
+                {salt: keccak256(abi.encodePacked(newName))}
+                (newName, ERC20(token).symbol()
+            ));
 
-            unwrappedToken = address(new ERC20(newName, ERC20(token).symbol()));
             nativeToUnwrapped[token] = unwrappedToken;
             unwrappedToNative[unwrappedToken] = token;
             isNative[unwrappedToken] = true;
         }
     }
 }
+
 

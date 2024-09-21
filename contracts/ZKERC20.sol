@@ -7,6 +7,8 @@ contract ZKERC20 is IZKERC20, MerkleTree {
     address public immutable node;
     uint256 public constant DEFAULT_SECRET = 0;
 
+    mapping(uint256 => bool) public usedNullifiers;
+
     event Mint(address indexed asset, address indexed to, uint256 amount);
     event Burn(address indexed asset, address indexed from, uint256 amount);
     event Transfer();
@@ -27,18 +29,17 @@ contract ZKERC20 is IZKERC20, MerkleTree {
 
     function mint(address asset, address to, uint256 amount) external onlyNode {
         uint256 newLeaf = commitment(to, asset, amount, DEFAULT_SECRET);
-        //_insert(newLeaf, proof); // TODO where to get proof from
+        _insert(newLeaf);
         emit Mint(asset, to, amount);
     }
 
-    function burn(address asset, address from, uint256 amount, uint256[] memory proof) external onlyNode {
-        // TODO: this will burn the entire balance, then mint the remaining balance
-        emit Burn(asset, from, amount);
-    }
+    function burn(address asset, address from, uint256 amount, uint256 _nullifier, uint256[] memory proof) external onlyNode {
+        require(!usedNullifiers[_nullifier], "ZKERC20: nullifier already used");
 
-    function burn(address asset, address from, uint256[] memory proof) external onlyNode {
-        // TODO: this will burn the entire balance
-        emit Burn(asset, from, 0); // TODO
+        // TODO: verify proof
+
+        usedNullifiers[_nullifier] = true;
+        emit Burn(asset, from, amount);
     }
 
 
@@ -98,12 +99,12 @@ contract ZKERC20 is IZKERC20, MerkleTree {
         uint256 left,
         uint256 right
     ) public override pure returns (uint256) {
-        return _hash(abi.encodePacked(left, right));
+        return uint256(keccak256(abi.encodePacked(left, right))); // TODO
     }
 
 
-    // Pedersen
+    // Posiden
     function _hash(bytes memory data) public pure returns (uint256) {
-
+        return uint256(keccak256(data)); // TODO
     }
 }
