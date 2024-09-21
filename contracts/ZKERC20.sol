@@ -29,16 +29,17 @@ contract ZKERC20 is IZKERC20, MerkleTree {
     
 
     // TODO: refactor
-    function mint(address asset, address to, uint256 amount) external onlyNode {
-        uint256 newLeaf = _commitment(to, asset, amount, DEFAULT_SECRET);
-        _insert(newLeaf);
+    function mint(address asset, address to, uint256 amount) external onlyNode returns (uint256 receipt) {
+        receipt = _commitment(to, asset, amount, DEFAULT_SECRET);
+        _insert(receipt);
         emit Mint(asset, to, amount);
     }
 
 
-    function mint(uint256 commitment) external onlyNode {
+    function mint(uint256 commitment) external onlyNode returns (uint256) {
         _insert(commitment);
         emit Mint();
+        return commitment;
     }
 
 

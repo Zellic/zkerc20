@@ -25,17 +25,17 @@ contract Node is BridgeManager {
     // LOCKING
 
 
-    function lock(address token, uint256 amount) external {
+    function lock(address token, uint256 amount) external returns (uint256 receipt) {
         IERC20(token).safeTransferFrom(msg.sender, address(this), amount);
 
         address originalToken = unwrappedToNative[token];
         if (originalToken != address(0)) {
             // we're re-wrapping a token
-            IZKERC20(zkerc20).mint(originalToken, msg.sender, amount);
+            receipt = IZKERC20(zkerc20).mint(originalToken, msg.sender, amount);
         } else {
             // we're wrapping a native token
             isNative[token] = true;
-            IZKERC20(zkerc20).mint(token, msg.sender, amount);
+            receipt = IZKERC20(zkerc20).mint(token, msg.sender, amount);
         }
     }
 
