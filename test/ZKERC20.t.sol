@@ -30,8 +30,8 @@ contract ZKERC20Test is Test {
 
         // TODO: proof
         // 0 arg is the default secret
-        uint256 _nullifier = zkerc20.nullifier(address(this), asset, 100, 0);
-        zkerc20.burn(asset, address(this), 100, _nullifier, new uint256[](0));
+        uint256 nullifier = zkerc20._nullifier(address(this), asset, 100, 0);
+        zkerc20.burn(asset, address(this), 100, nullifier, new uint256[](0));
         uint256 newRoot2 = zkerc20.root();
         assertTrue(newRoot1 == newRoot2);
     }

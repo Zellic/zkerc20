@@ -10,6 +10,7 @@ contract ZKERC20 is IZKERC20, MerkleTree {
     mapping(uint256 => bool) public usedNullifiers;
 
     event Mint(address indexed asset, address indexed to, uint256 amount);
+    event Mint();
     event Burn(address indexed asset, address indexed from, uint256 amount);
     event Transfer();
 
@@ -27,18 +28,24 @@ contract ZKERC20 is IZKERC20, MerkleTree {
     // NODE-ONLY FUNCTIONS
     
 
+    // TODO: refactor
     function mint(address asset, address to, uint256 amount) external onlyNode {
-        uint256 newLeaf = commitment(to, asset, amount, DEFAULT_SECRET);
+        uint256 newLeaf = _commitment(to, asset, amount, DEFAULT_SECRET);
         _insert(newLeaf);
         emit Mint(asset, to, amount);
     }
 
-    function burn(address asset, address from, uint256 amount, uint256 _nullifier, uint256[] memory proof) external onlyNode {
-        require(!usedNullifiers[_nullifier], "ZKERC20: nullifier already used");
+    function mint(uint256 commitment) external onlyNode {
+        _insert(commitment);
+        emit Mint();
+    }
+
+    function burn(address asset, address from, uint256 amount, uint256 nullifier, uint256[] memory proof) external onlyNode {
+        require(!usedNullifiers[nullifier], "ZKERC20: nullifier already used");
 
         // TODO: verify proof
 
-        usedNullifiers[_nullifier] = true;
+        usedNullifiers[nullifier] = true;
         emit Burn(asset, from, amount);
     }
 
@@ -47,7 +54,7 @@ contract ZKERC20 is IZKERC20, MerkleTree {
     // PUBLIC FUNCTIONS
 
 
-    function transferFrom(uint256[] memory proof) external {
+    function transferFrom(uint256 nullifier, uint256[] memory proof) external {
         // TODO
         emit Transfer();
     }
@@ -56,13 +63,9 @@ contract ZKERC20 is IZKERC20, MerkleTree {
     function name() public pure returns (string memory) {
         return "ZKERC20";
     }
-
-
     function symbol() public pure returns (string memory) {
         return "ZKERC20";
     }
-
-
     function decimals() public pure returns (uint8) {
         revert("ZKERC20: decimals not supported");
     }
@@ -82,14 +85,14 @@ contract ZKERC20 is IZKERC20, MerkleTree {
 
     
     // nullifier || salt
-    function commitment(address to, address asset, uint256 amount, uint256 salt) public pure returns (uint256 leaf) {
-        uint256 _nullifier = nullifier(to, asset, amount, salt);
-        leaf = _hash(abi.encodePacked(_nullifier, salt));
+    function _commitment(address to, address asset, uint256 amount, uint256 salt) public pure returns (uint256 leaf) {
+        uint256 nullifier = _nullifier(to, asset, amount, salt);
+        leaf = _hash(abi.encodePacked(nullifier, salt));
     }
 
 
     // sender || asset || amount || salt
-    function nullifier(address sender, address asset, uint256 amount, uint256 salt) public pure returns (uint256) {
+    function _nullifier(address sender, address asset, uint256 amount, uint256 salt) public pure returns (uint256) {
         return _hash(abi.encodePacked(sender, asset, amount, salt));
     }
 

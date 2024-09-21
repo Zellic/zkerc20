@@ -4,8 +4,8 @@ import { Bridge } from "./Bridge.sol";
 import { OApp, Origin, MessagingFee } from "@layerzerolabs/lz-evm-oapp-v2/contracts/oapp/OApp.sol";
 
 contract LZBridge is Bridge, OApp {
-    constructor(address _manager, address _endpoint)
-        Bridge(_manager) OApp(_endpoint, msg.sender) {}
+    constructor(address _deployer, address _manager, address _endpoint)
+        Bridge(_manager) OApp(_endpoint, _deployer) {}
 
 
     function _sendMessage(address sender, uint256 destChainId, bytes memory data) internal override {

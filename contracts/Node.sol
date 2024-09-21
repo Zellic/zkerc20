@@ -68,8 +68,8 @@ contract Node is BridgeManager {
 
 
     // TODO: remove `token`
-    function _receiveMessage(uint256 srcChainId, address token, uint256[] memory proof) internal override {
-        IZKERC20(zkerc20).transferFrom(proof);
+    function _receiveMessage(uint256 srcChainId, uint256 commitment) internal override {
+        IZKERC20(zkerc20).mint(commitment);
     }
 
 
