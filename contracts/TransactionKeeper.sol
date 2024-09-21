@@ -26,7 +26,7 @@ contract TransactionKeeper is MerkleTree(30) {
         uint256 commitment,
         uint256 index,
 
-        address address,
+        address spender,
         address asset,
         uint256 amount,
         uint256 salt

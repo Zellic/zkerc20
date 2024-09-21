@@ -8,7 +8,7 @@ import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 
 contract GM is ERC20 {
     constructor(address sender) ERC20("GM", "GM") {
-        _mint(sender, 1000000 * 10 ** decimals());
+        _mint(sender, 100000000000);
     }
 }
 
@@ -19,6 +19,7 @@ contract Deploy is Ownable {
     Node public node;
     LZBridge public lzBridge;
     CCIPBridge public ccipBridge;
+    address public memecoin;
 
     // DO NOT CHANGE. ONLY ADD NEW BRIDGE TYPES
     uint8 public constant LZ_BRIDGE = 10;
@@ -49,9 +50,10 @@ contract Deploy is Ownable {
     }
 
 
-    function demo() public onlyOwner returns (address memecoin) {
+    function demo() public onlyOwner returns (address) {
         // create new memecoin and mint to sender
         memecoin = _createMemecoin();
+        return memecoin;
     }
 
 
