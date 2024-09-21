@@ -62,7 +62,7 @@ contract LZBridgeTest is TestHelper {
         bytes memory options;
 
         // Quote the fee for sending tokens
-        (uint256 nativeFee, uint256 lzTokenFee) = aLZBridge.estimateFee(CHAIN_ID_B, abi.encode(uint256(0)));
+        uint256 nativeFee = aLZBridge.estimateFee(CHAIN_ID_B, abi.encode(uint256(0)));
 
         // Perform the send operation
         bytes memory payload = abi.encode(uint256(1337));

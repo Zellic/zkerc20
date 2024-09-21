@@ -12,8 +12,21 @@ remappings = [
     "@openzeppelin=lib/openzeppelin-contracts/",
     "solidity-bytes-utils/contracts=lib/solidity-bytes-utils/contracts/",
     "@layerzerolabs/lz-evm-v1-0.7/=node_modules/@layerzerolabs/lz-evm-v1-0.7/",
-    "hardhat-deploy/solc_0.8/=node_modules/hardhat-deploy/solc_0.8/"
+    "hardhat-deploy/solc_0.8/=node_modules/hardhat-deploy/solc_0.8/",
+    "@chainlink/contracts/=node_modules/@chainlink/contracts",
+    "@chainlink/contracts-ccip/=node_modules/@chainlink/contracts-ccip",
+    "@chainlink/local=node_modules/@chainlink/local"
 ]
 
 
-# See more config options https://github.com/foundry-rs/foundry/blob/master/crates/config/README.md#all-options
+[rpc_endpoints]
+ethereumSepolia = "${ETHEREUM_SEPOLIA_RPC_URL}"
+optimismGoerli = "${OPTIMISM_GOERLI_RPC_URL}"
+avalancheFuji = "${AVALANCHE_FUJI_RPC_URL}"
+arbitrumSepolia = "${ARBITRUM_SEPOLIA_RPC_URL}"
+polygonMumbai = "${POLYGON_MUMBAI_RPC_URL}"
+bnbChainTestnet = "${BNB_CHAIN_TESTNET_RPC_URL}"
+baseSepolia = "${BASE_SEPOLIA_RPC_URL}"
+metisSepolia = "${METIS_SEPOLIA_RPC_URL}"
+zksyncSepolia = "${ZKSYNC_SEPOLIA_RPC_URL}"
+

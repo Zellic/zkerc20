@@ -20,4 +20,10 @@ abstract contract Bridge is IBridge {
     function receiveMessage(uint256 srcChainId, bytes memory data) internal {
         IBridgeManager(manager).receiveMessage(srcChainId, data);
     }
+
+    function estimateFee(
+        uint256 destChainId,
+        bytes memory payload
+    ) public view virtual returns (uint256);
+    
 }

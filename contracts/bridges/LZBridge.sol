@@ -8,6 +8,7 @@ contract LZBridge is Bridge, OApp {
     using OptionsBuilder for bytes;
 
     mapping(uint256 => uint32) public chainIdToEid;
+    mapping(uint32 => uint256) public eidToChainId;
 
     constructor(address _deployer, address _manager, address _endpoint)
         Bridge(_manager) OApp(_endpoint, _deployer) {}
@@ -16,7 +17,7 @@ contract LZBridge is Bridge, OApp {
     function _sendMessage(address sender, uint256 destChainId, bytes memory data) internal override {
         require(chainIdToEid[destChainId] != 0, "LZBridge: destination chain not configured");
         _lzSend(
-            chainIdToEid[destChainId], // TODO: map to LZ chain ID
+            chainIdToEid[destChainId],
             data,
             _buildOptions(),
             MessagingFee(msg.value, 0), // (nativeFee, lzTokenFee)
@@ -26,26 +27,17 @@ contract LZBridge is Bridge, OApp {
 
 
     function estimateFee(
-        uint256 _destChainId,
-        bytes memory _payload
-    ) public view returns (uint256 nativeFee, uint256 lzTokenFee) {
-        require(chainIdToEid[_destChainId] != 0, "LZBridge: destination chain not configured");
+        uint256 destChainId,
+        bytes memory payload
+    ) public view override returns (uint256) {
+        require(chainIdToEid[destChainId] != 0, "LZBridge: destination chain not configured");
 
         bytes memory _options = _buildOptions();
-        MessagingFee memory fee = _quote(chainIdToEid[_destChainId], _payload, _options, false);
-        return (fee.nativeFee, fee.lzTokenFee);
+        MessagingFee memory fee = _quote(chainIdToEid[destChainId], payload, _options, false);
+        return fee.nativeFee;
     }
 
 
-    /// @notice Entry point for receiving messages.
-    /// @param _origin The origin information containing the source endpoint and sender address.
-    ///  - srcEid: The source chain endpoint ID.
-    ///  - sender: The sender address on the src chain.
-    ///  - nonce: The nonce of the message.
-    /// @param _guid The unique identifier for the received LayerZero message.
-    /// @param payload The payload of the received message.
-    /// @param _executor The address of the executor for the received message.
-    /// @param _extraData Additional arbitrary data provided by the corresponding executor.
     function _lzReceive(
         Origin calldata _origin,
         bytes32 _guid,
@@ -53,8 +45,9 @@ contract LZBridge is Bridge, OApp {
         address _executor,
         bytes calldata _extraData
     ) internal override {
-        receiveMessage(_origin.srcEid, payload);
+        receiveMessage(eidToChainId[_origin.srcEid], payload);
     }
+
 
     function _buildOptions() private pure returns (bytes memory) {
         return OptionsBuilder.newOptions()
@@ -64,7 +57,11 @@ contract LZBridge is Bridge, OApp {
 
 
     function configureChainId(uint256 chainId, uint32 eid) public onlyOwner {
+        require(chainIdToEid[chainId] == 0 && eidToChainId[eid] == 0, "LZBridge: chainId already configured");
+        require(chainId != 0, "LZBridge: invalid chainId");
         require(eid != 0, "LZBridge: invalid eid");
+
         chainIdToEid[chainId] = eid;
+        eidToChainId[eid] = chainId;
     }
 }
