@@ -89,6 +89,27 @@ contract TransactionKeeper is MerkleTree(30) {
         rightIndex = _insert(rightCommitment);
     }
 
+    function split(
+        address spender,
+        uint256 leftCommitment,
+        uint256 rightCommitment,
+        uint256[8] memory nullifiers,
+        ProofCommitment memory proof
+    ) internal returns (uint256 leftCommitment, uint256 rightIndex) {
+        require(
+            checkProof(
+                spender,
+                leftCommitment,
+                rightCommitment,
+                nullifiers,
+                proof
+            ),
+            "Invalid proof"
+        );
+
+        rightIndex = _insert(rightCommitment);
+    }
+
     function drop(
         address spender,
         address asset,
