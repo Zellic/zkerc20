@@ -43,12 +43,11 @@ contract CCIPBridge is Bridge, CCIPReceiver, Ownable {
     ) internal override {
         uint64 latestSourceChainSelector = message.sourceChainSelector;
         address latestSender = abi.decode(message.sender, (address));
-        bytes memory latestMessage = abi.decode(message.data, (bytes));
         
         uint256 sourceChainId = selectorToChainId[latestSourceChainSelector];
         require(sourceChainId != 0, "CCIPBridge: source chain not configured");
         require(chainIdToCounterparty[sourceChainId] == latestSender, "CCIPBridge: unauthorized sender");
-        receiveMessage(sourceChainId, latestMessage);
+        receiveMessage(sourceChainId, message.data);
     }
 
 
@@ -63,15 +62,29 @@ contract CCIPBridge is Bridge, CCIPReceiver, Ownable {
     }
 
 
+    bytes4 public constant EVM_EXTRA_ARGS_V1_TAG = 0x97a657c9;
+    struct EVMExtraArgsV1 {
+        uint256 gasLimit;
+        bool strict;
+    }
+    function _argsToBytes(EVMExtraArgsV1 memory extraArgs) internal pure returns (bytes memory bts) {
+        return abi.encodeWithSelector(EVM_EXTRA_ARGS_V1_TAG, extraArgs);
+    }
+
+
     function _createPayload(
         uint256 destChainId,
         bytes memory payload
     ) internal view returns (Client.EVM2AnyMessage memory) {
+
         return Client.EVM2AnyMessage({
             receiver: abi.encode(chainIdToCounterparty[destChainId]),
             data: payload,
             tokenAmounts: new Client.EVMTokenAmount[](0),
-            extraArgs: "",
+            extraArgs: _argsToBytes(EVMExtraArgsV1({
+                gasLimit: 2_000_000,
+                strict: false
+            })),
             feeToken: address(0)
         });
     }

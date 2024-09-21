@@ -22,10 +22,10 @@ contract LZBridgeTest is Test {
     uint256 public CHAIN_ID_A = 1;
     uint256 public CHAIN_ID_B = 2;
 
-    CCIPLocalSimulator public ccipLocalSimulator;
+    CCIPLocalSimulator public ccipLocalSimulator1;
+    CCIPLocalSimulator public ccipLocalSimulator2;
     address alice;
     address bob;
-    IRouterClient router;
 
     CCIPBridgeMock aBridge;
     CCIPBridgeMock bBridge;
@@ -34,19 +34,29 @@ contract LZBridgeTest is Test {
 
 
     function setUp() public {
-        ccipLocalSimulator = new CCIPLocalSimulator();
+        ccipLocalSimulator1 = new CCIPLocalSimulator();
+        ccipLocalSimulator2 = new CCIPLocalSimulator();
     
-        (uint64 chainSelector, IRouterClient sourceRouter,,,,,) =
-            ccipLocalSimulator.configuration();
+        (uint64 chainSelector1, IRouterClient sourceRouter1,,,,,) =
+            ccipLocalSimulator1.configuration();
+        (uint64 chainSelector2, IRouterClient sourceRouter2,,,,,) =
+            ccipLocalSimulator2.configuration();
+        sourceRouter2 = sourceRouter1; // same router for now
         alice = makeAddr("alice");
         bob = makeAddr("bob");
         vm.deal(alice, 1000 ether);
         vm.deal(bob, 1000 ether);
-        router = sourceRouter;
 
-        aBridge = new CCIPBridgeMock(address(this), address(this), address(router));
-        bBridge = new CCIPBridgeMock(address(this), address(this), address(router));
-        aBridge.configureChainId(CHAIN_ID_B, chainSelector, address(bBridge));
+        aBridge = new CCIPBridgeMock(address(this), address(this), address(sourceRouter1));
+        bBridge = new CCIPBridgeMock(address(this), address(this), address(sourceRouter2));
+        aBridge.configureChainId(CHAIN_ID_B, chainSelector1, address(bBridge));
+        bBridge.configureChainId(CHAIN_ID_A, chainSelector2, address(aBridge));
+        vm.label(address(aBridge), "aBridge");
+        vm.label(address(bBridge), "bBridge");
+        vm.label(address(ccipLocalSimulator1), "ccipLocalSimulator1");
+        vm.label(address(ccipLocalSimulator2), "ccipLocalSimulator2");
+        vm.label(alice, "alice");
+        vm.label(bob, "bob");
         // skipping bBridge configuration for now
     }
 
