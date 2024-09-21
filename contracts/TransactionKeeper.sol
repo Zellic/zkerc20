@@ -16,6 +16,22 @@ struct ProofCommitment {
 }
 
 contract TransactionKeeper is MerkleTree(30) {
+
+    event Transaction (
+        uint256 commitment,
+        uint256 index
+    );
+
+    event PublicTransaction (
+        uint256 commitment,
+        uint256 index,
+
+        address address,
+        address asset,
+        uint256 amount,
+        uint256 salt
+    );
+
     Groth16Verifier public verifier = new Groth16Verifier();
     mapping(uint256 => bool) public spent;
 
@@ -87,6 +103,9 @@ contract TransactionKeeper is MerkleTree(30) {
 
         leftIndex = _insert(leftCommitment);
         rightIndex = _insert(rightCommitment);
+
+        emit Transaction(leftCommitment, leftIndex);
+        emit Transaction(rightCommitment, rightIndex);
     }
 
     /*
@@ -115,6 +134,8 @@ contract TransactionKeeper is MerkleTree(30) {
 
         remainingCommitment = leftCommitment;
         rightIndex = _insert(rightCommitment);
+
+        emit Transaction(rightCommitment, rightIndex);
     }
 
     /*
@@ -150,6 +171,8 @@ contract TransactionKeeper is MerkleTree(30) {
         );
 
         rightIndex = _insert(rightCommitment);
+
+        emit Transaction(rightCommitment, rightIndex);
     }
 
     function insert(
@@ -157,21 +180,31 @@ contract TransactionKeeper is MerkleTree(30) {
         address asset,
         uint256 amount,
         uint256 salt
-    ) internal returns (uint256) {
-        return _insert(
-            _commitment(
-                uint256(uint160(spender)),
-                uint256(uint160(asset)),
-                amount,
-                salt
-            )
+    ) internal returns (uint256 index) {
+        uint256 commitment = _commitment(
+            uint256(uint160(spender)),
+            uint256(uint160(asset)),
+            amount,
+            salt
+        );
+
+        uint256 index = _insert(commitment);
+
+        emit PublicTransaction (
+            commitment,
+            index,
+            spender,
+            asset,
+            amount,
+            salt
         );
     }
 
     function insert(
         uint256 commitment
-    ) internal returns (uint256) {
-        return _insert(commitment);
+    ) internal returns (uint256 index) {
+        uint256 index = _insert(commitment);
+        emit Transaction(commitment, index);
     }
 
     function _hash(
