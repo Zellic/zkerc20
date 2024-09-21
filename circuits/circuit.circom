@@ -36,12 +36,13 @@ template HashCheck() {
     again.outs[0] === hash;
 }
 
-template VerifyMerkleProof(height) {
+template MerkleRoot(height) {
     signal input value;
-    signal input root;
 
     signal input path[height];
     signal input sides[height];
+
+    signal output root;
 
     signal hash[height + 1];
     component hasher[height];
@@ -61,7 +62,7 @@ template VerifyMerkleProof(height) {
         hash[i + 1] <== hasher[i].hash;
     }
 
-    hash[height] === root;
+    root <== hash[height];
 }
 
 template Commitment() {
@@ -119,6 +120,8 @@ template Split(height, notes) {
     component commitments[notes];
     component verifiers[notes];
 
+    signal merkleValid[notes];
+
     var totalAmount = 0;
     for (var i = 0; i < notes; i++) {
         commitments[i] = Commitment();
@@ -129,14 +132,18 @@ template Split(height, notes) {
 
         commitments[i].nullifier === nullifiers[i];
 
-        verifiers[i] = VerifyMerkleProof(height);
+        verifiers[i] = MerkleRoot(height);
         verifiers[i].value <== commitments[i].commitment;
-        verifiers[i].root <== root;
 
         for (var j = 0; j < height; j++) {
             verifiers[i].path[j] <== path[i][j];
             verifiers[i].sides[j] <== sides[i][j];
         }
+
+        // either the commitment is in the tree
+        // or it represents zero tokens
+        merkleValid[i] <== verifiers[i].root - root;
+        merkleValid[i] * amounts[i] === 0;
 
         totalAmount += amounts[i];
     }

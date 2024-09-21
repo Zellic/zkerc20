@@ -69,6 +69,8 @@ const utils = async () => {
         return [nullifier, commitment]
     }
 
+    console.log(mimcSponge.F.toObject(commit(1, 2, 3, 4)[1]))
+
     return {
         mimcSponge,
         poseidon,
