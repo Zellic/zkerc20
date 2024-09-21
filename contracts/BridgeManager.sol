@@ -12,12 +12,17 @@ abstract contract BridgeManager is IBridgeManager, Ownable {
     mapping(address => uint8) public contractToBridge; // bridge contract => bridge id
 
 
-    function _sendMessage(uint8 bridgeId, address sender, uint256 destChainId, uint256 commitment) internal {
+    function _sendMessage(
+        uint8 bridgeId,
+        address refundAddress,
+        uint256 destChainId, // TODO: share bits with bridgeId for gas opt
+        uint256 commitment
+    ) internal {
         address bridge = bridgeToContract[bridgeId];
         require(bridge != address(0), "Node: bridge not configured");
 
         bytes memory data = abi.encode(VERSION, commitment);
-        IBridge(bridge).sendMessage{value: msg.value}(sender, destChainId, data);
+        IBridge(bridge).sendMessage{value: msg.value}(refundAddress, destChainId, data);
     }
 
 

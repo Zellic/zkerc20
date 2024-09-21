@@ -4,6 +4,7 @@ import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { ERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { BridgeManager } from "./BridgeManager.sol";
+import { ProofCommitment } from "./TransactionKeeper.sol";
 import { ZKERC20 } from "./ZKERC20.sol";
 import { IZKERC20 } from "./interfaces/IZKERC20.sol";
 
@@ -32,11 +33,11 @@ contract Node is BridgeManager {
         address originalToken = unwrappedToNative[token];
         if (originalToken != address(0)) {
             // we're re-wrapping a token
-            receipt = IZKERC20(zkerc20).mint(originalToken, msg.sender, amount, salt);
+            receipt = IZKERC20(zkerc20)._mint(originalToken, msg.sender, amount, salt);
         } else {
             // we're wrapping a native token
             isNative[token] = true;
-            receipt = IZKERC20(zkerc20).mint(token, msg.sender, amount, salt);
+            receipt = IZKERC20(zkerc20)._mint(token, msg.sender, amount, salt);
         }
     }
 
@@ -56,10 +57,10 @@ contract Node is BridgeManager {
         uint256 amount,
         uint256 salt,
         uint256 remainderCommitment,
-        uint256[8] nullifier,
+        uint256[8] memory nullifier,
         ProofCommitment memory proof
     ) external {
-        IZKERC20(zkerc20).burn(
+        IZKERC20(zkerc20)._burn(
             token,
             msg.sender,
             amount,
@@ -91,18 +92,30 @@ contract Node is BridgeManager {
 
 
     function _receiveMessage(uint256 srcChainId, uint256 commitment) internal override {
-        IZKERC20(zkerc20).mint(commitment);
+        IZKERC20(zkerc20)._mint(commitment);
     }
 
 
     function bridge(
         uint8 bridgeId,
-        address receiver,
-        uint256 nullifier,
-        uint256[] memory proof,
-        // TODO
+        uint256 destChainId, // TODO: use bridgeId for upper bits (gas opt)
+        uint256 leftCommitment,
+        uint256 rightCommitment,
+        uint256[8] memory nullifiers,
+        ProofCommitment memory proof
     ) external {
-        BridgeManager._sendMessage(...);
+        (uint256 remainingCommitment, uint256 index) = IZKERC20(zkerc20)._bridge(
+            leftCommitment,
+            rightCommitment,
+            nullifiers,
+            proof
+        );
+        BridgeManager._sendMessage(
+            bridgeId, 
+            msg.sender, // only used for refunds
+            destChainId,
+            remainingCommitment
+        );
     }
 
 

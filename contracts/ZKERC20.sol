@@ -1,6 +1,6 @@
 pragma solidity ^0.8.27;
 
-import { TransactionKeeper } from "./TransactionKeeper.sol";
+import { TransactionKeeper, ProofCommitment } from "./TransactionKeeper.sol";
 import { IZKERC20 } from "./interfaces/IZKERC20.sol";
 
 contract ZKERC20 is IZKERC20, TransactionKeeper {
@@ -26,7 +26,7 @@ contract ZKERC20 is IZKERC20, TransactionKeeper {
     // NODE-ONLY FUNCTIONS
 
 
-    function mint(
+    function _mint(
         address asset,
         address to,
         uint256 amount,
@@ -38,25 +38,25 @@ contract ZKERC20 is IZKERC20, TransactionKeeper {
             asset,
             amount,
             salt
-        )
+        );
     }
 
 
-    function mint(uint256 commitment) external onlyNode returns (uint256) {
+    function _mint(uint256 commitment) external onlyNode returns (uint256) {
         emit Mint();
         return TransactionKeeper.insert(commitment);
     }
 
 
-    function burn(
+    function _burn(
         address asset,
         address from,
         uint256 amount,
         uint256 salt,
         uint256 remainderCommitment,
-        uint256[8] nullifier,
+        uint256[8] memory nullifier,
         ProofCommitment memory proof
-    ) external returns (uint256) onlyNode {
+    ) external onlyNode returns (uint256) {
         emit Burn(asset, from, amount);
         return TransactionKeeper.drop(
             from,
@@ -64,8 +64,26 @@ contract ZKERC20 is IZKERC20, TransactionKeeper {
             amount,
             salt,
             remainderCommitment,
+            nullifier,
             proof
-        )
+        );
+    }
+
+
+    function _bridge(
+        uint256 leftCommitment,
+        uint256 rightCommitment,
+        uint256[8] memory nullifier,
+        ProofCommitment memory proof
+    ) external override onlyNode returns (uint256, uint256) {
+        emit Transfer();
+        return TransactionKeeper.bridge(
+            msg.sender,
+            leftCommitment,
+            rightCommitment,
+            nullifier,
+            proof
+        );
     }
 
 
@@ -77,7 +95,7 @@ contract ZKERC20 is IZKERC20, TransactionKeeper {
         address spender,
         uint256 payoutCommitment,
         uint256 remainderCommitment,
-        uint256[8] nullifier,
+        uint256[8] memory nullifier,
         ProofCommitment memory proof
     ) external returns (uint256 payoutIndex, uint256 remainderIndex) {
         emit Transfer();

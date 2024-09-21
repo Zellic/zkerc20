@@ -89,13 +89,19 @@ contract TransactionKeeper is MerkleTree(30) {
         rightIndex = _insert(rightCommitment);
     }
 
+    /*
+     * This reveals the spender. It's difficult to get around this. We 
+     * recommend transferring to then bridging from an ephemeral address. The 
+     * secret/salt isn't sufficient to prevent this because it's known on the 
+     * first mint (when you first use the protocol).
+     */
     function bridge(
         address spender,
         uint256 leftCommitment,
         uint256 rightCommitment,
         uint256[8] memory nullifiers,
         ProofCommitment memory proof
-    ) internal returns (uint256 leftCommitment, uint256 rightIndex) {
+    ) internal returns (uint256 remainingCommitment, uint256 rightIndex) {
         require(
             checkProof(
                 spender,
@@ -107,9 +113,15 @@ contract TransactionKeeper is MerkleTree(30) {
             "Invalid proof"
         );
 
+        remainingCommitment = leftCommitment;
         rightIndex = _insert(rightCommitment);
     }
 
+    /*
+     * Drop reveals salt which reveals last transfer. Ideas:
+     * 1. Move amount outside the nullifier
+     * 2. Use ephemeral transfer/address 
+     */
     function drop(
         address spender,
         address asset,

@@ -10,12 +10,12 @@ abstract contract Bridge is IBridge {
         manager = _manager;
     }
 
-    function sendMessage(address sender, uint256 destChainId, bytes memory data) external payable {
+    function sendMessage(address refundAddress, uint256 destChainId, bytes memory data) external payable {
         require(msg.sender == manager, "Bridge: Only manager can send message");
-        _sendMessage(sender, destChainId, data);
+        _sendMessage(refundAddress, destChainId, data);
     }
 
-    function _sendMessage(address sender, uint256 destChainId, bytes memory data) internal virtual;
+    function _sendMessage(address refundAddress, uint256 destChainId, bytes memory data) internal virtual;
 
     function receiveMessage(uint256 srcChainId, bytes memory data) internal {
         IBridgeManager(manager).receiveMessage(srcChainId, data);

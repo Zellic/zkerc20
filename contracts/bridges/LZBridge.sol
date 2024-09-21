@@ -14,14 +14,14 @@ contract LZBridge is Bridge, OApp {
         Bridge(_manager) OApp(_endpoint, _deployer) {}
 
 
-    function _sendMessage(address sender, uint256 destChainId, bytes memory data) internal override {
+    function _sendMessage(address refundAddress, uint256 destChainId, bytes memory data) internal override {
         require(chainIdToEid[destChainId] != 0, "LZBridge: destination chain not configured");
         _lzSend(
             chainIdToEid[destChainId],
             data,
             _buildOptions(),
             MessagingFee(msg.value, 0), // (nativeFee, lzTokenFee)
-            payable(sender) // refund addr
+            payable(refundAddress)
         );
     }
 

@@ -21,7 +21,7 @@ contract CCIPBridge is Bridge, CCIPReceiver, Ownable {
     }
 
 
-    function _sendMessage(address sender, uint256 destChainId, bytes memory data) internal override {
+    function _sendMessage(address refundAddress, uint256 destChainId, bytes memory data) internal override {
         require(chainIdToSelector[destChainId] != 0, "CCIPBridge: destination chain not configured");
 
         Client.EVM2AnyMessage memory message = _createPayload(destChainId, data);
@@ -82,7 +82,7 @@ contract CCIPBridge is Bridge, CCIPReceiver, Ownable {
             data: payload,
             tokenAmounts: new Client.EVMTokenAmount[](0),
             extraArgs: _argsToBytes(EVMExtraArgsV1({
-                gasLimit: 2_000_000,
+                gasLimit: 2_000_000, // TODO: pick accurate gas numbers
                 strict: false
             })),
             feeToken: address(0)
