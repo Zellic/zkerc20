@@ -7,9 +7,5 @@
     "circomlibjs": "^0.1.7",
     "ffjavascript": "^0.3.0",
     "snarkjs": "^0.7.4",
-
-    "@chainlink/contracts": "^0.6.1",
-    "@chainlink/contracts-ccip": "^1.4.0",
-    "@chainlink/local": "github:smartcontractkit/chainlink-local"
   }
 }
