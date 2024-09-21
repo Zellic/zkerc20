@@ -1,7 +1,11 @@
 {
   "dependencies": {
     "@layerzerolabs/lz-evm-v1-0.7": "^2.3.42",
+    "hardhat-deploy": "^0.12.4",
+    "circom_tester": "^0.0.20",
     "circomlib": "^2.0.5",
-    "hardhat-deploy": "^0.10.5"
+    "circomlibjs": "^0.1.7",
+    "ffjavascript": "^0.3.0",
+    "snarkjs": "^0.7.4"
   }
 }

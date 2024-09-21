@@ -15,3 +15,5 @@ docs/
 
 .direnv
 node_modules
+
+circuits/final.ptau

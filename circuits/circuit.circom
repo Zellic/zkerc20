@@ -4,7 +4,7 @@ pragma circom 2.1.9;
 
 include "../node_modules/circomlib/circuits/bitify.circom";
 include "../node_modules/circomlib/circuits/mimcsponge.circom";
-include "../node_modules/circomlib/circuits/pedersen.circom";
+include "../node_modules/circomlib/circuits/poseidon.circom";
 
 template HashTwo() {
     signal input left;
@@ -16,6 +16,24 @@ template HashTwo() {
     hasher.ins[1] <== right;
     hasher.k <== 0;
     hash <== hasher.outs[0];
+}
+
+template HashCheck() {
+    signal input left;
+    signal input right;
+    signal input hash;
+
+    component hasher = MiMCSponge(2, 220, 1);
+    hasher.ins[0] <== left;
+    hasher.ins[1] <== right;
+    hasher.k <== 0;
+
+    component again = MiMCSponge(2, 220, 1);
+    again.ins[0] <== hasher.outs[0];
+    again.ins[1] <== hasher.outs[0];
+    again.k <== 0;
+
+    again.outs[0] === hash;
 }
 
 template VerifyMerkleProof(height) {
@@ -46,7 +64,7 @@ template VerifyMerkleProof(height) {
     hash[height] === root;
 }
 
-template Commitment(address) {
+template Commitment() {
     signal input sender;
     signal input asset;
     signal input amount;
@@ -55,46 +73,20 @@ template Commitment(address) {
     signal output nullifier;
     signal output commitment;
 
-    component senderBits = Num2Bits(address);
-    component assetBits = Num2Bits(address);
-    component amountBits = Num2Bits(248);
-    component saltBits = Num2Bits(248);
+    component nullifierHasher = Poseidon(4);
+    nullifierHasher.inputs[0] <== sender;
+    nullifierHasher.inputs[1] <== asset;
+    nullifierHasher.inputs[2] <== amount;
+    nullifierHasher.inputs[3] <== salt;
+    nullifier <== nullifierHasher.out;
 
-    senderBits.in <== sender;
-    assetBits.in <== asset;
-    amountBits.in <== amount;
-    saltBits.in <== salt;
-
-    // sender || asset || amount || salt
-    component nullifierHash = Pedersen(address + address + 248 + 248);
-
-    for (var i = 0; i < 160; i++) {
-        nullifierHash.in[i] <== senderBits.out[i];
-        nullifierHash.in[i + 160] <== assetBits.out[i];
-    }
-
-    for (var i = 0; i < 248; i++) {
-        nullifierHash.in[i + 320] <== amountBits.out[i];
-        nullifierHash.in[i + 568] <== saltBits.out[i];
-    }
-
-    nullifier <== nullifierHash.out[0];
-
-    component nullifierBits = Num2Bits(248);
-    nullifierBits.in <== nullifier;
-
-    // nullifier || salt
-    component commitmentHash = Pedersen(248 + 248);
-
-    for (var i = 0; i < 248; i++) {
-        commitmentHash.in[i] <== nullifierBits.out[i];
-        commitmentHash.in[i + 248] <== saltBits.out[i];
-    }
-
-    commitment <== commitmentHash.out[0];
+    component commitmentHasher = Poseidon(2);
+    commitmentHasher.inputs[0] <== nullifier;
+    commitmentHasher.inputs[1] <== salt;
+    commitment <== commitmentHasher.out;
 }
 
-template Split(height, notes, address) {
+template Split(height, notes) {
     // notes in
     signal input root;
     signal input sender;
@@ -114,6 +106,9 @@ template Split(height, notes, address) {
     signal input rightSalt;
     signal input rightCommitment;
 
+    assert(leftAmount < 2 ** 100);
+    assert(rightAmount < 2 ** 100);
+
     // should be hash(sender, amount, salt)
     signal input nullifiers[notes];
 
@@ -126,7 +121,7 @@ template Split(height, notes, address) {
 
     var totalAmount = 0;
     for (var i = 0; i < notes; i++) {
-        commitments[i] = Commitment(address);
+        commitments[i] = Commitment();
         commitments[i].sender <== sender;
         commitments[i].asset <== asset;
         commitments[i].amount <== amounts[i];
@@ -150,14 +145,14 @@ template Split(height, notes, address) {
     totalAmount === leftAmount + rightAmount;
 
     // verify that the commitments are correct
-    component left = Commitment(address);
+    component left = Commitment();
     left.sender <== leftRecipient;
     left.asset <== asset;
     left.amount <== leftAmount;
     left.salt <== leftSalt;
     left.commitment === leftCommitment;
 
-    component right = Commitment(address);
+    component right = Commitment();
     right.sender <== rightRecipient;
     right.asset <== asset;
     right.amount <== rightAmount;
@@ -173,4 +168,4 @@ component main {
         rightCommitment, // contract inserts this into the commitment
         nullifiers // contract marks these as spent
     ]
-} = Split(30, 8, 160);
+} = Split(30, 8);
