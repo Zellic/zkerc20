@@ -25,17 +25,17 @@ contract Node is BridgeManager {
     // LOCKING
 
 
-    function lock(address token, uint256 amount) external returns (uint256 receipt) {
+    function lock(address token, uint256 amount, uint256 salt) external returns (uint256 receipt) {
         IERC20(token).safeTransferFrom(msg.sender, address(this), amount);
 
         address originalToken = unwrappedToNative[token];
         if (originalToken != address(0)) {
             // we're re-wrapping a token
-            receipt = IZKERC20(zkerc20).mint(originalToken, msg.sender, amount);
+            receipt = IZKERC20(zkerc20).mint(originalToken, msg.sender, amount, salt);
         } else {
             // we're wrapping a native token
             isNative[token] = true;
-            receipt = IZKERC20(zkerc20).mint(token, msg.sender, amount);
+            receipt = IZKERC20(zkerc20).mint(token, msg.sender, amount, salt);
         }
     }
 
@@ -50,8 +50,23 @@ contract Node is BridgeManager {
 
 
     // TODO: support burning partial note too?
-    function unlock(address token, uint256 amount, uint256 nullifier, uint256[] memory proof) external {
-        IZKERC20(zkerc20).burn(token, msg.sender, amount, nullifier, proof);
+    function unlock(
+        address token,
+        uint256 amount,
+        uint256 salt,
+        uint256 remainderCommitment,
+        uint256[8] nullifier,
+        ProofCommitment memory proof
+    ) external {
+        IZKERC20(zkerc20).burn(
+            token,
+            msg.sender,
+            amount,
+            salt,
+            remainderCommitment,
+            nullifier,
+            proof
+        );
         _unlock(token, amount);
     }
 
@@ -76,7 +91,11 @@ contract Node is BridgeManager {
     }
 
 
-    function bridge(uint8 bridgeId, uint256 nullifier, uint256[] memory proof) external {
+    function bridge(
+        uint8 bridgeId,
+        uint256 nullifier,
+        uint256[] memory proof
+    ) external {
         // TODO
     }
 

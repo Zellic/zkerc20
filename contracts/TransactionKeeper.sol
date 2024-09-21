@@ -119,6 +119,28 @@ contract TransactionKeeper is MerkleTree(30) {
         rightIndex = _insert(rightCommitment);
     }
 
+    function insert(
+        address spender,
+        address asset,
+        uint256 amount,
+        uint256 salt
+    ) internal returns (uint256) {
+        return _insert(
+            _commitment(
+                uint256(uint160(spender)),
+                uint256(uint160(asset)),
+                amount,
+                salt
+            )
+        );
+    }
+
+    function insert(
+        uint256 commitment
+    ) internal returns (uint256) {
+        return _insert(commitment);
+    }
+
     function _hash(
         uint256 left,
         uint256 right
@@ -128,6 +150,15 @@ contract TransactionKeeper is MerkleTree(30) {
         (r, c) = mimcSponge.MiMCSponge(r, 0, 0);
         r += right;
         (r,) = mimcSponge.MiMCSponge(r, c, 0);
+    }
+
+    function _nullifier(
+        uint256 sender,
+        uint256 asset,
+        uint256 amount,
+        uint256 salt
+    ) public view returns (uint256) {
+        return poseidonFour.poseidon([sender, asset, amount, salt]);
     }
 
     function _commitment(

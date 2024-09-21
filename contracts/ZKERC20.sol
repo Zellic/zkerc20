@@ -1,13 +1,11 @@
 pragma solidity ^0.8.27;
 
-import { MerkleTree } from "./MerkleTree.sol";
+import { TransactionKeeper } from "./TransactionKeeper.sol";
 import { IZKERC20 } from "./interfaces/IZKERC20.sol";
 
-contract ZKERC20 is IZKERC20, MerkleTree {
+contract ZKERC20 is IZKERC20, TransactionKeeper {
     address public immutable node;
     uint256 public constant DEFAULT_SECRET = 0;
-
-    mapping(uint256 => bool) public usedNullifiers;
 
     event Mint(address indexed asset, address indexed to, uint256 amount);
     event Mint();
@@ -19,37 +17,55 @@ contract ZKERC20 is IZKERC20, MerkleTree {
         _;
     }
 
-    constructor() MerkleTree(20) {
+    constructor() {
         node = msg.sender;
     }
 
 
     //////////////////////////
     // NODE-ONLY FUNCTIONS
-    
 
-    // TODO: refactor
-    function mint(address asset, address to, uint256 amount) external onlyNode returns (uint256 receipt) {
-        receipt = _commitment(to, asset, amount, DEFAULT_SECRET);
-        _insert(receipt);
+
+    function mint(
+        address asset,
+        address to,
+        uint256 amount,
+        uint256 salt
+    ) external onlyNode returns (uint256) {
         emit Mint(asset, to, amount);
+        return TransactionKeeper.insert(
+            to,
+            asset,
+            amount,
+            salt
+        )
     }
 
 
     function mint(uint256 commitment) external onlyNode returns (uint256) {
-        _insert(commitment);
         emit Mint();
-        return commitment;
+        return TransactionKeeper.insert(commitment);
     }
 
 
-    function burn(address asset, address from, uint256 amount, uint256 nullifier, uint256[] memory proof) external onlyNode {
-        require(!usedNullifiers[nullifier], "ZKERC20: nullifier already used");
-
-        // TODO: verify proof
-
-        usedNullifiers[nullifier] = true;
+    function burn(
+        address asset,
+        address from,
+        uint256 amount,
+        uint256 salt,
+        uint256 remainderCommitment,
+        uint256[8] nullifier,
+        ProofCommitment memory proof
+    ) external returns (uint256) onlyNode {
         emit Burn(asset, from, amount);
+        return TransactionKeeper.drop(
+            from,
+            asset,
+            amount,
+            salt,
+            remainderCommitment,
+            proof
+        )
     }
 
 
@@ -57,9 +73,21 @@ contract ZKERC20 is IZKERC20, MerkleTree {
     // PUBLIC FUNCTIONS
 
 
-    function transferFrom(uint256 nullifier, uint256[] memory proof) external {
-        // TODO
+    function transferFrom(
+        address spender,
+        uint256 payoutCommitment,
+        uint256 remainderCommitment,
+        uint256[8] nullifier,
+        ProofCommitment memory proof
+    ) external returns (uint256 payoutIndex, uint256 remainderIndex) {
         emit Transfer();
+        return TransactionKeeper.split(
+            spender,
+            payoutCommitment,
+            remainderCommitment,
+            nullifier,
+            proof
+        );
     }
 
 
@@ -84,37 +112,5 @@ contract ZKERC20 is IZKERC20, MerkleTree {
     }
     function allowance(address owner, address spender) public pure returns (uint256) {
         revert("ZKERC20: allowance not supported");
-    }
-
-
-    //////////////////////////
-    // HELPER FUNCTIONS
-
-    
-    // nullifier || salt
-    function _commitment(address to, address asset, uint256 amount, uint256 salt) public pure returns (uint256 leaf) {
-        uint256 nullifier = _nullifier(to, asset, amount, salt);
-        leaf = _hash(abi.encodePacked(nullifier, salt));
-    }
-
-
-    // sender || asset || amount || salt
-    function _nullifier(address sender, address asset, uint256 amount, uint256 salt) public pure returns (uint256) {
-        return _hash(abi.encodePacked(sender, asset, amount, salt));
-    }
-
-    
-    // MIMC
-    function _hash(
-        uint256 left,
-        uint256 right
-    ) public override pure returns (uint256) {
-        return uint256(keccak256(abi.encodePacked(left, right))); // TODO
-    }
-
-
-    // Posiden
-    function _hash(bytes memory data) public pure returns (uint256) {
-        return uint256(keccak256(data)); // TODO
     }
 }
