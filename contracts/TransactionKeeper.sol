@@ -188,7 +188,7 @@ contract TransactionKeeper is MerkleTree(30) {
             salt
         );
 
-        uint256 index = _insert(commitment);
+        index = _insert(commitment);
 
         emit PublicTransaction (
             commitment,
@@ -203,7 +203,7 @@ contract TransactionKeeper is MerkleTree(30) {
     function insert(
         uint256 commitment
     ) internal returns (uint256 index) {
-        uint256 index = _insert(commitment);
+        index = _insert(commitment);
         emit Transaction(commitment, index);
     }
 
