@@ -11,7 +11,6 @@ abstract contract MerkleTree {
 
     constructor(uint8 _targetHeight) {
         require(_targetHeight > 0, "Invalid target height");
-        require(_targetHeight < 32, "Invalid target height"); // you'd just need to add more to zeros()
 
         targetHeight = _targetHeight;
 
@@ -39,15 +38,6 @@ abstract contract MerkleTree {
 
         root = current;
         transactions++;
-    }
-
-
-    function buildProof(
-        uint256 value,
-        uint256 index,
-        uint256[] memory proof
-    ) public pure returns (uint256) {
-        return 0;
     }
 
 
