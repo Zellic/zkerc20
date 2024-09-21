@@ -11,6 +11,10 @@ abstract contract BridgeManager is IBridgeManager, Ownable {
     mapping(uint8 => address) public bridgeToContract; // bridge id => bridge contract
     mapping(address => uint8) public contractToBridge; // bridge contract => bridge id
 
+    constructor(address _deployer) Ownable() {
+        transferOwnership(_deployer);
+    }
+
 
     function _sendMessage(
         uint8 bridgeId,

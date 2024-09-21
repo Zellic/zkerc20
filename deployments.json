@@ -1,0 +1,72 @@
+{
+    "eth-sepolia": {
+        "address": "0x6d29a1FA81Ca2DE5573d076B1922eF18F8bD70e8",
+        "deployer": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+        "memecoin": {
+            "to": "0x6d29a1FA81Ca2DE5573d076B1922eF18F8bD70e8",
+            "from": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+            "contractAddress": null,
+            "transactionIndex": 0,
+            "root": "0x0000000000000000000000000000000000000000000000000000000000000000",
+            "gasUsed": {
+                "type": "BigNumber",
+                "hex": "0x108753"
+            },
+            "logsBloom": "0x00000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000008000000000000000000000000000000000000000000000000020000000000000100000800000000000000000000000010000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000800000000000002000000200000000000000000000000002000000000000000000020000000000000000000000000000000000000000000000000000000000000000000",
+            "blockHash": "0x8ed891741fb2a48e3f49fe11423682c8d25e9253aca744f98760b217fe1a711a",
+            "transactionHash": "0x1c4457ba53e76879c823c4af9f2d37df36432b891e8afadc26cac904c676b3b8",
+            "logs": [
+                {
+                    "transactionIndex": 0,
+                    "blockNumber": 6734025,
+                    "transactionHash": "0x1c4457ba53e76879c823c4af9f2d37df36432b891e8afadc26cac904c676b3b8",
+                    "address": "0xD03e3341c2D85bBa785fBb15d9cbA1fEf47236F2",
+                    "topics": [
+                        "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef",
+                        "0x0000000000000000000000000000000000000000000000000000000000000000",
+                        "0x000000000000000000000000f39fd6e51aad88f6f4ce6ab8827279cfffb92266"
+                    ],
+                    "data": "0x00000000000000000000000000000000000000000000d3c21bcecceda1000000",
+                    "logIndex": 0,
+                    "blockHash": "0x8ed891741fb2a48e3f49fe11423682c8d25e9253aca744f98760b217fe1a711a"
+                }
+            ],
+            "blockNumber": 6734025,
+            "confirmations": 1,
+            "cumulativeGasUsed": {
+                "type": "BigNumber",
+                "hex": "0x108753"
+            },
+            "effectiveGasPrice": {
+                "type": "BigNumber",
+                "hex": "0x5e92f762"
+            },
+            "status": 1,
+            "type": 2,
+            "byzantium": true,
+            "events": [
+                {
+                    "transactionIndex": 0,
+                    "blockNumber": 6734025,
+                    "transactionHash": "0x1c4457ba53e76879c823c4af9f2d37df36432b891e8afadc26cac904c676b3b8",
+                    "address": "0xD03e3341c2D85bBa785fBb15d9cbA1fEf47236F2",
+                    "topics": [
+                        "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef",
+                        "0x0000000000000000000000000000000000000000000000000000000000000000",
+                        "0x000000000000000000000000f39fd6e51aad88f6f4ce6ab8827279cfffb92266"
+                    ],
+                    "data": "0x00000000000000000000000000000000000000000000d3c21bcecceda1000000",
+                    "logIndex": 0,
+                    "blockHash": "0x8ed891741fb2a48e3f49fe11423682c8d25e9253aca744f98760b217fe1a711a"
+                }
+            ]
+        },
+        "chainId": 10,
+        "lzChainId": 40161,
+        "ccipChainId": 1,
+        "lzAddr": "0x05a2E5965d537F74E71e962c79E3498F9cD81133",
+        "ccipAddr": "0xe89Dc5c4E2c3DbB727C7380b10cE6291Cb166B3c",
+        "nodeAddr": "0x98E46E7A6Eb3608461294Ab396AD4A49Ffd83186",
+        "hashContracts": "0x698F64c61073a9cC0bC29ac54Fc467B8D268ba1f"
+    }
+}

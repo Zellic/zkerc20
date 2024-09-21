@@ -8,6 +8,26 @@ import { ProofCommitment } from "./TransactionKeeper.sol";
 import { ZKERC20 } from "./ZKERC20.sol";
 import { IZKERC20 } from "./interfaces/IZKERC20.sol";
 
+
+contract uwERC20 is ERC20 {
+    address public node;
+
+    constructor(string memory name, string memory symbol) ERC20(name, symbol) {
+        node = msg.sender;
+    }
+
+    function mint(address to, uint256 amount) external {
+        require(msg.sender == node, "uwERC20: only node can mint");
+        _mint(to, amount);
+    }
+
+    function burn(address from, uint256 amount) external {
+        require(msg.sender == node, "uwERC20: only node can burn");
+        _burn(from, amount);
+    }
+}
+
+
 contract Node is BridgeManager {
     using SafeERC20 for IERC20;
 
@@ -17,8 +37,8 @@ contract Node is BridgeManager {
 
     address public immutable zkerc20;
 
-    constructor() {
-        zkerc20 = address(new ZKERC20{salt: bytes32(uint256(0xdeadbeef))}());
+    constructor(address _deployer, address _hashContracts) BridgeManager(_deployer) {
+        zkerc20 = address(new ZKERC20{salt: bytes32(uint256(0xdeadbeef))}(_hashContracts));
     }
 
 
@@ -28,14 +48,16 @@ contract Node is BridgeManager {
 
     function lock(address token, uint256 amount, uint256 salt) external returns (uint256 receipt) {
         // take the user's original ERC20 tokens
-        IERC20(token).safeTransferFrom(msg.sender, address(this), amount);
 
         address originalToken = unwrappedToNative[token];
         if (originalToken != address(0)) {
             // we're re-wrapping a token
+            uwERC20(token).burn(msg.sender, amount);
             receipt = IZKERC20(zkerc20)._mint(originalToken, msg.sender, amount, salt);
         } else {
             // we're wrapping a native token
+            IERC20(token).safeTransferFrom(msg.sender, address(this), amount);
+
             isNative[token] = true;
             receipt = IZKERC20(zkerc20)._mint(token, msg.sender, amount, salt);
         }
@@ -82,7 +104,7 @@ contract Node is BridgeManager {
             // the token is not native to this chain.
             // we need to make a "fake" token
             address unwrappedToken = _unwrapToken(token);
-            IERC20(unwrappedToken).transfer(msg.sender, amount);
+            uwERC20(unwrappedToken).mint(address(this), amount);
         }
     }
 
@@ -129,7 +151,7 @@ contract Node is BridgeManager {
             // need to deploy a new unwrapped ZK token
             string memory origName = ERC20(token).name();
             string memory newName = string(abi.encodePacked("uwZK", origName));
-            unwrappedToken = address(new ERC20
+            unwrappedToken = address(new uwERC20
                 {salt: keccak256(abi.encodePacked(newName))}
                 (newName, ERC20(token).symbol()
             ));

@@ -4,7 +4,7 @@ import { Node } from "../contracts/Node.sol";
 import { LZBridge } from "../contracts/bridges/LZBridge.sol";
 import { CCIPBridge } from "../contracts/bridges/CCIPBridge.sol";
 import { ERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-
+import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 
 contract GM is ERC20 {
     constructor(address sender) ERC20("GM", "GM") {
@@ -16,26 +16,24 @@ contract GM is ERC20 {
 contract Deploy is Ownable {
     event Deployed(address node, address lzBridge, address ccipBridge);
 
-    Node node public;
-    LZBridge lzBridge public;
-    CCIPBridge ccipBridge public;
+    Node public node;
+    LZBridge public lzBridge;
+    CCIPBridge public ccipBridge;
 
     // DO NOT CHANGE. ONLY ADD NEW BRIDGE TYPES
     uint8 public constant LZ_BRIDGE = 10;
     uint8 public constant CCIP_BRIDGE = 20;
 
-    constructor(address _lzEndpoint, address _ccipRouter) {
-        address deployer = msg.sender;
-        transferOwnership(deployer);
+    constructor() {
+        transferOwnership(msg.sender);
+    }
 
-        node = new Node();
-        lzBridge = new LZBridge(deployer, address(node), _lzEndpoint);
-        ccipBridge = new CCIPBridge(deployer, address(node), _ccipRouter);
-        event Deployed(address(node), address(lzBridge), address(ccipBridge));
 
-        // configure node to accept LZ and CCIP bridges
-        node.configureBridge(LZ_BRIDGE, address(lzBridge));
-        node.configureBridge(CCIP_BRIDGE, address(ccipBridge));
+    function initialize(address _hashContracts, address payable _node, address _lzBridge, address _ccipBridge) public onlyOwner {
+        require(address(node) == address(0), "Already initialized");
+        node = Node(_node);
+        lzBridge = LZBridge(_lzBridge);
+        ccipBridge = CCIPBridge(_ccipBridge);
     }
 
 

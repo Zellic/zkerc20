@@ -1,7 +1,7 @@
 pragma solidity ^0.8.27;
 
 import { MerkleTree } from "./MerkleTree.sol";
-import { Groth16Verifier } from "@circuits/verifier.sol";
+import { Groth16Verifier } from "../circuits/verifier.sol";
 import {
     IPoseidonTwo,
     IPoseidonFour,
@@ -23,11 +23,11 @@ contract TransactionKeeper is MerkleTree(30) {
     IPoseidonFour public poseidonFour;
     IMimcSponge public mimcSponge;
 
-    constructor() {
-        HashContracts deployer = new HashContracts();
-        poseidonTwo = deployer.deployPoseidonTwo();
-        poseidonFour = deployer.deployPoseidonFour();
-        mimcSponge = deployer.deployMimcSponge();
+    constructor(address _hashContracts) {
+        HashContracts deployer = HashContracts(_hashContracts);
+        poseidonTwo = deployer.poseidonTwo();
+        poseidonFour = deployer.poseidonFour();
+        mimcSponge = deployer.mimcSponge();
     }
 
     function checkProof(

@@ -17,7 +17,7 @@ contract ZKERC20 is IZKERC20, TransactionKeeper {
         _;
     }
 
-    constructor() {
+    constructor(address _contracts) TransactionKeeper(_contracts) {
         node = msg.sender;
     }
 
