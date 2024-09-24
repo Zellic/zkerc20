@@ -4,7 +4,7 @@ import {Test, console} from "forge-std/Test.sol";
 import { ZKERC20 } from "../contracts/ZKERC20.sol";
 
 contract TestZKERC20 is ZKERC20 {
-
+    constructor(address contracts) ZKERC20(contracts) {}
 }
 
 contract ZKERC20Test is Test {

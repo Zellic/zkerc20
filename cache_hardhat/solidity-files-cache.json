@@ -188,7 +188,7 @@
       ]
     },
     "/home/aaron/github/zkerc20/contracts/Node.sol": {
-      "lastModificationDate": 1726942294481,
+      "lastModificationDate": 1726949004484,
       "contentHash": "dda403afe55752f90dcc1b070e4bb80a",
       "sourceName": "contracts/Node.sol",
       "solcConfig": {
@@ -233,8 +233,8 @@
       ]
     },
     "/home/aaron/github/zkerc20/contracts/TransactionKeeper.sol": {
-      "lastModificationDate": 1726943710298,
-      "contentHash": "8d601413f314e357247a792ecd609440",
+      "lastModificationDate": 1726956350136,
+      "contentHash": "34c2f5b617e6df466c3baca2c71d67c6",
       "sourceName": "contracts/TransactionKeeper.sol",
       "solcConfig": {
         "version": "0.8.27",
@@ -273,7 +273,7 @@
       ]
     },
     "/home/aaron/github/zkerc20/contracts/ZKERC20.sol": {
-      "lastModificationDate": 1726941008670,
+      "lastModificationDate": 1726956350136,
       "contentHash": "b7deadab5ae79458fbff07b55bce9d89",
       "sourceName": "contracts/ZKERC20.sol",
       "solcConfig": {
@@ -1753,7 +1753,7 @@
       ]
     },
     "/home/aaron/github/zkerc20/contracts/Deploy.sol": {
-      "lastModificationDate": 1726943837214,
+      "lastModificationDate": 1726966260208,
       "contentHash": "8ad6541e3d941b4c2d0e872219e3a793",
       "sourceName": "contracts/Deploy.sol",
       "solcConfig": {

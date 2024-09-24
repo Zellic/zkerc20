@@ -6,7 +6,7 @@ The protocol consists of a contract on each supported ecosystem, which utilizes 
 
 The ZK circuits powering this functionality are designed to be friendly towards potential privacy-focused DeFi protocols, including anonymous perps/leverage protocols, dark pools, and ZK orderbooks/DEXes. Of course, users can at any time withdraw their zkERC-20. On the original chain, this leaves them with the corresponding ERC-20; on others, they receive a wrapped variant economically pegged 1:1.
 
-For more information about the privacy guarantees of the protocol, see [`docs/MOTIVATION.md`](docs/MOTIVATION.md).
+For more information about the privacy guarantees of the protocol, see [`docs/MOTIVATIONS.md`](docs/MOTIVATIONS.md).
 
 # How it works
 
