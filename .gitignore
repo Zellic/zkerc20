@@ -1,5 +1,6 @@
 # Compiler files
 cache/
+cache_hardhat/
 out/
 
 # Ignores development broadcast logs
@@ -12,6 +13,7 @@ out/
 
 .direnv
 node_modules
+package_lock.json
 
 circuits/final.ptau
 artifacts/
