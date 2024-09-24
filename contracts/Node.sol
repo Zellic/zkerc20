@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0
 pragma solidity 0.8.27;
 
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -113,7 +114,7 @@ contract Node is BridgeManager {
     // BRIDGING
 
 
-    function _receiveMessage(uint256 srcChainId, uint256 commitment) internal override {
+    function _receiveMessage(uint256/* srcChainId*/, uint256 commitment) internal override {
         IZKERC20(zkerc20)._mint(commitment);
     }
 
@@ -126,7 +127,7 @@ contract Node is BridgeManager {
         uint256[8] memory nullifiers,
         ProofCommitment memory proof
     ) external {
-        (uint256 remainingCommitment, uint256 index) = IZKERC20(zkerc20)._bridge(
+        (uint256 remainingCommitment,) = IZKERC20(zkerc20)._bridge(
             leftCommitment,
             rightCommitment,
             nullifiers,

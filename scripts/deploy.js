@@ -229,7 +229,7 @@ async function test2() {
     });*/
 
 
-    console.log("Balance before:", await gm.balanceOf(p.wallet.address));
+    //console.log("Balance before:", await gm.balanceOf(p.wallet.address));
 
 
     // try to unlock using
@@ -269,9 +269,14 @@ async function test2() {
     );
     await tx.wait();
 
-    console.log("Balance after:", await gm.balanceOf(p.wallet.address));
+    //console.log("Balance after:", await gm.balanceOf(p.wallet.address));
 }
 
+
+deployAndSetup().then(() => process.exit(0)).catch(error => {
+    console.error(error);
+    process.exit(1);
+});
 
 /*deployAndSetup().then(() => {
     test().then(() => process.exit(0)).catch(error => {
@@ -284,8 +289,9 @@ async function test2() {
     process.exit(1);
 });*/
 
+    /*
 test2().then(() => process.exit(0)).catch(error => {
     console.error(error);
     process.exit(1);
 });
-
+*/

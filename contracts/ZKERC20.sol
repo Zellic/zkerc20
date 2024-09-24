@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0
 pragma solidity ^0.8.27;
 
 import { TransactionKeeper, ProofCommitment } from "./TransactionKeeper.sol";
@@ -125,10 +126,10 @@ contract ZKERC20 is IZKERC20, TransactionKeeper {
     function totalSupply() public pure returns (uint256) {
         revert("ZKERC20: totalSupply not supported");
     }
-    function balanceOf(address account) public pure returns (uint256) {
+    function balanceOf(address) public pure returns (uint256) {
         revert("ZKERC20: balanceOf not supported");
     }
-    function allowance(address owner, address spender) public pure returns (uint256) {
+    function allowance(address, address) public pure returns (uint256) {
         revert("ZKERC20: allowance not supported");
     }
 }

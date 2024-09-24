@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0
 pragma solidity ^0.8.27;
 
 interface IPoseidonTwo {
@@ -25,9 +26,6 @@ contract HashContracts {
     IPoseidonFour public poseidonFour;
     IMimcSponge public mimcSponge;
         
-    constructor() {
-    }
-
     function initialize() public {
         require(address(poseidonTwo) == address(0), "Already initialized");
         poseidonTwo = this.deployPoseidonTwo();
