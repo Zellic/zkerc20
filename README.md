@@ -15,3 +15,4 @@ Our protocol uses completely custom zero knowledge circuits, which allows the pr
 Users interact with the protocol by providing proofs of certain invariants. These are produced off-chain. We provide a number of options: they can be computed directly in the browser using WebAssembly, or even by a self-hosted server implementation.
 
 The bridging mechanism allows assets to be transferred with very concise messages. We choose to implement a higher level abstraction that allows the protocol to be composed with any bridge. This expands the number of chains and possible trust configurations,
+

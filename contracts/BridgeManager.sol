@@ -1,4 +1,3 @@
-// SPDX-License-Identifier: GPL-3.0
 pragma solidity ^0.8.27;
 
 import "./interfaces/IBridge.sol";
@@ -11,6 +10,7 @@ abstract contract BridgeManager is IBridgeManager, Ownable {
 
     mapping(uint8 => address) public bridgeToContract; // bridge id => bridge contract
     mapping(address => uint8) public contractToBridge; // bridge contract => bridge id
+
 
     constructor(address _deployer) Ownable() {
         transferOwnership(_deployer);
@@ -33,11 +33,10 @@ abstract contract BridgeManager is IBridgeManager, Ownable {
 
     function receiveMessage(uint256 srcChainId, bytes memory data) external {
         (uint8 version, uint256 commitment) = abi.decode(data, (uint8, uint256));
+        require(version == VERSION, "Node: invalid version");
 
         uint8 bridgeId = contractToBridge[msg.sender];
         require(bridgeId != 0, "Node: bridge not configured");
-
-        require(version == VERSION, "Node: invalid version");
 
         _receiveMessage(srcChainId, commitment);
     }
@@ -48,6 +47,7 @@ abstract contract BridgeManager is IBridgeManager, Ownable {
 
     //////////////////////////
     // CONFIGURATION
+
 
     function configureBridge(uint8 bridgeId, address bridge) external onlyOwner {
         require(bridgeId != 0, "Node: invalid bridge id"); // 0 must mean unconfigured

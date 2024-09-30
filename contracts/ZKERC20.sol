@@ -1,4 +1,3 @@
-// SPDX-License-Identifier: GPL-3.0
 pragma solidity ^0.8.27;
 
 import { TransactionKeeper, ProofCommitment } from "./TransactionKeeper.sol";
@@ -79,7 +78,7 @@ contract ZKERC20 is IZKERC20, TransactionKeeper {
     ) external override onlyNode returns (uint256, uint256) {
         emit Transfer();
         return TransactionKeeper.bridge(
-            msg.sender,
+            msg.sender, // TODO: current limitation: we must reveal the sender here. Client must bundle with transferFrom
             leftCommitment,
             rightCommitment,
             nullifier,
@@ -93,7 +92,7 @@ contract ZKERC20 is IZKERC20, TransactionKeeper {
 
 
     function transferFrom(
-        address spender,
+        address spender, // TODO: don't want to reveal this?
         uint256 payoutCommitment,
         uint256 remainderCommitment,
         uint256[8] memory nullifier,
@@ -115,7 +114,7 @@ contract ZKERC20 is IZKERC20, TransactionKeeper {
 
 
     function name() public pure returns (string memory) {
-        return "ZKERC20";
+        return "zkERC20";
     }
     function symbol() public pure returns (string memory) {
         return "ZKERC20";
@@ -126,10 +125,10 @@ contract ZKERC20 is IZKERC20, TransactionKeeper {
     function totalSupply() public pure returns (uint256) {
         revert("ZKERC20: totalSupply not supported");
     }
-    function balanceOf(address) public pure returns (uint256) {
+    function balanceOf(address account) public pure returns (uint256) {
         revert("ZKERC20: balanceOf not supported");
     }
-    function allowance(address, address) public pure returns (uint256) {
+    function allowance(address owner, address spender) public pure returns (uint256) {
         revert("ZKERC20: allowance not supported");
     }
 }

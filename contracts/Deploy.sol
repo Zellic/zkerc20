@@ -1,4 +1,3 @@
-// SPDX-License-Identifier: GPL-3.0
 pragma solidity ^0.8.27;
 
 import { Node } from "../contracts/Node.sol";
@@ -31,7 +30,7 @@ contract Deploy is Ownable {
     }
 
 
-    function initialize(address _hashContracts, address payable _node, address _lzBridge, address _ccipBridge) public onlyOwner {
+    function initialize(address/* _hashContracts*/, address payable _node, address _lzBridge, address _ccipBridge) public onlyOwner {
         require(address(node) == address(0), "Already initialized");
         node = Node(_node);
         lzBridge = LZBridge(_lzBridge);

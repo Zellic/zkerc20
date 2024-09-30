@@ -145,6 +145,10 @@ template Split(height, notes) {
         merkleValid[i] <== verifiers[i].root - root;
         merkleValid[i] * amounts[i] === 0;
 
+        // overflow check (TODO: is this the best way?)
+        totalAmount + amounts[i] >== totalAmount
+        totalAmount + amounts[i] >== amounts[i]
+
         totalAmount += amounts[i];
     }
 

@@ -1,4 +1,3 @@
-// SPDX-License-Identifier: GPL-3.0
 pragma solidity ^0.8.27;
 
 import { Bridge } from "./Bridge.sol";
@@ -16,13 +15,13 @@ contract CCIPBridge is Bridge, CCIPReceiver, Ownable {
     address public router;
 
 
-    constructor(address/* _deployer*/, address _manager, address _router)
+    constructor(address _deployer, address _manager, address _router)
         Bridge(_manager) CCIPReceiver(_router) {
         router = _router;
     }
 
 
-    function _sendMessage(address/* refundAddress*/, uint256 destChainId, bytes memory data) internal override {
+    function _sendMessage(address refundAddress, uint256 destChainId, bytes memory data) internal override {
         require(chainIdToSelector[destChainId] != 0, "CCIPBridge: destination chain not configured");
 
         Client.EVM2AnyMessage memory message = _createPayload(destChainId, data);

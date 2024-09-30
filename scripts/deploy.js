@@ -49,7 +49,7 @@ async function deployAndSetup() {
         p.provider = new ethers.providers.JsonRpcProvider(p.endpoint);
         p.wallet = new ethers.Wallet(privateKey, p.provider);
 
-        console.log("Deploying contract on", p.name, "with the account:", p.wallet.address);
+        console.log("Deploying contracts on", p.name, "with the account:", p.wallet.address);
 
         // Deploy the HashContracts contract
         const HashContracts = await ethers.getContractFactory("HashContracts", p.wallet);
@@ -65,12 +65,11 @@ async function deployAndSetup() {
         console.log("... deploying Deploy to address:", p.deploy.address);
         await p.deploy.deployed();
 
-
         // Deploy the Node contract
         const Node = await ethers.getContractFactory("Node", p.wallet);
         p.node = await Node.deploy(p.deploy.address, p.hashContracts.address);
-        p.nodeAddr = p.node.address;
         console.log("... deploying Node contract to address:", p.node.address);
+        p.nodeAddr = p.node.address;
         await p.node.deployed();
 
         // Deploy LZBridge
@@ -229,7 +228,7 @@ async function test2() {
     });*/
 
 
-    //console.log("Balance before:", await gm.balanceOf(p.wallet.address));
+    console.log("Balance before:", await gm.balanceOf(p.wallet.address));
 
 
     // try to unlock using
@@ -269,14 +268,9 @@ async function test2() {
     );
     await tx.wait();
 
-    //console.log("Balance after:", await gm.balanceOf(p.wallet.address));
+    console.log("Balance after:", await gm.balanceOf(p.wallet.address));
 }
 
-
-deployAndSetup().then(() => process.exit(0)).catch(error => {
-    console.error(error);
-    process.exit(1);
-});
 
 /*deployAndSetup().then(() => {
     test().then(() => process.exit(0)).catch(error => {
@@ -289,9 +283,8 @@ deployAndSetup().then(() => process.exit(0)).catch(error => {
     process.exit(1);
 });*/
 
-    /*
 test2().then(() => process.exit(0)).catch(error => {
     console.error(error);
     process.exit(1);
 });
-*/
+

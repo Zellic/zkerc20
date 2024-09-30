@@ -1,4 +1,3 @@
-// SPDX-License-Identifier: GPL-3.0
 pragma solidity ^0.8.27;
 
 import { MerkleTree } from "./MerkleTree.sol";
@@ -17,7 +16,6 @@ struct ProofCommitment {
 }
 
 contract TransactionKeeper is MerkleTree(30) {
-
     event Transaction (
         uint256 commitment,
         uint256 index
@@ -33,6 +31,7 @@ contract TransactionKeeper is MerkleTree(30) {
         uint256 salt
     );
 
+
     Groth16Verifier public verifier = new Groth16Verifier();
     mapping(uint256 => bool) public spent;
 
@@ -40,12 +39,14 @@ contract TransactionKeeper is MerkleTree(30) {
     IPoseidonFour public poseidonFour;
     IMimcSponge public mimcSponge;
 
+
     constructor(address _hashContracts) {
         HashContracts deployer = HashContracts(_hashContracts);
         poseidonTwo = deployer.poseidonTwo();
         poseidonFour = deployer.poseidonFour();
         mimcSponge = deployer.mimcSponge();
     }
+
 
     function checkProof(
         address spender,
@@ -84,6 +85,7 @@ contract TransactionKeeper is MerkleTree(30) {
         return true;
     }
 
+
     function split(
         address spender,
         uint256 leftCommitment,
@@ -108,6 +110,7 @@ contract TransactionKeeper is MerkleTree(30) {
         emit Transaction(leftCommitment, leftIndex);
         emit Transaction(rightCommitment, rightIndex);
     }
+
 
     /*
      * This reveals the spender. It's difficult to get around this. We 
@@ -138,6 +141,7 @@ contract TransactionKeeper is MerkleTree(30) {
 
         emit Transaction(rightCommitment, rightIndex);
     }
+
 
     /*
      * Drop reveals salt which reveals last transfer. Ideas:
@@ -176,6 +180,7 @@ contract TransactionKeeper is MerkleTree(30) {
         emit Transaction(rightCommitment, rightIndex);
     }
 
+
     function insert(
         address spender,
         address asset,
@@ -201,12 +206,14 @@ contract TransactionKeeper is MerkleTree(30) {
         );
     }
 
+
     function insert(
         uint256 commitment
     ) internal returns (uint256 index) {
         index = _insert(commitment);
         emit Transaction(commitment, index);
     }
+
 
     function _hash(
         uint256 left,
@@ -219,6 +226,7 @@ contract TransactionKeeper is MerkleTree(30) {
         (r,) = mimcSponge.MiMCSponge(r, c, 0);
     }
 
+
     function _nullifier(
         uint256 sender,
         uint256 asset,
@@ -227,6 +235,7 @@ contract TransactionKeeper is MerkleTree(30) {
     ) public view returns (uint256) {
         return poseidonFour.poseidon([sender, asset, amount, salt]);
     }
+
 
     function _commitment(
         uint256 sender,

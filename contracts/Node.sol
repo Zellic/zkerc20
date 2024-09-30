@@ -1,4 +1,3 @@
-// SPDX-License-Identifier: GPL-3.0
 pragma solidity 0.8.27;
 
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -10,20 +9,26 @@ import { ZKERC20 } from "./ZKERC20.sol";
 import { IZKERC20 } from "./interfaces/IZKERC20.sol";
 
 
-contract uwERC20 is ERC20 {
+interface IWZKERC20 is IERC20 {
+    function mint(address to, uint256 amount) external;
+    function burn(address from, uint256 amount) external;
+}
+
+
+contract WZKERC20 is ERC20 {
     address public node;
 
-    constructor(string memory name, string memory symbol) ERC20(name, symbol) {
+    constructor() ERC20("WZKERC20", "WZKERC20") {
         node = msg.sender;
     }
 
     function mint(address to, uint256 amount) external {
-        require(msg.sender == node, "uwERC20: only node can mint");
+        require(msg.sender == node, "WZKERC20: only node can mint");
         _mint(to, amount);
     }
 
     function burn(address from, uint256 amount) external {
-        require(msg.sender == node, "uwERC20: only node can burn");
+        require(msg.sender == node, "WZKERC20: only node can burn");
         _burn(from, amount);
     }
 }
@@ -32,11 +37,12 @@ contract uwERC20 is ERC20 {
 contract Node is BridgeManager {
     using SafeERC20 for IERC20;
 
-    mapping(address => address) public nativeToUnwrapped; // the original token's address => the unwrapped token address
-    mapping(address => address) public unwrappedToNative; // the unwrapped token address => the original token address
-    mapping(address => bool) public isNative; // XXX: obviously, this won't be sync'd across chains and could be race con'd
+    mapping(address => address) public nativeToWrapped; // the original token's address => the wrapped token address
+    mapping(address => address) public wrappedToNative; // the wrapped token address => the original token address
+    mapping(address => bool) public isNative; // XXX: obviously, this won't be sync'd across chains and could be race con'd. Worst case scenario is you can't withdraw on that chain.
 
     address public immutable zkerc20;
+
 
     constructor(address _deployer, address _hashContracts) BridgeManager(_deployer) {
         zkerc20 = address(new ZKERC20{salt: bytes32(uint256(0xdeadbeef))}(_hashContracts));
@@ -49,11 +55,10 @@ contract Node is BridgeManager {
 
     function lock(address token, uint256 amount, uint256 salt) external returns (uint256 receipt) {
         // take the user's original ERC20 tokens
-
-        address originalToken = unwrappedToNative[token];
+        address originalToken = wrappedToNative[token];
         if (originalToken != address(0)) {
             // we're re-wrapping a token
-            uwERC20(token).burn(msg.sender, amount);
+            IWZKERC20(token).burn(msg.sender, amount);
             receipt = IZKERC20(zkerc20)._mint(originalToken, msg.sender, amount, salt);
         } else {
             // we're wrapping a native token
@@ -66,6 +71,8 @@ contract Node is BridgeManager {
 
 
     receive() external payable {
+        // TODO: consider wrapping as WETH? can't convert to native coin on 
+        //   dest chains though.
         revert("Node: native coin not supported");
     }
 
@@ -104,8 +111,8 @@ contract Node is BridgeManager {
         } else {
             // the token is not native to this chain.
             // we need to make a "fake" token
-            address unwrappedToken = _unwrapToken(token);
-            uwERC20(unwrappedToken).mint(address(this), amount);
+            address wrappedToken = _wrapToken(token);
+            IWZKERC20(wrappedToken).mint(address(this), amount);
         }
     }
 
@@ -114,7 +121,7 @@ contract Node is BridgeManager {
     // BRIDGING
 
 
-    function _receiveMessage(uint256/* srcChainId*/, uint256 commitment) internal override {
+    function _receiveMessage(uint256 srcChainId, uint256 commitment) internal override {
         IZKERC20(zkerc20)._mint(commitment);
     }
 
@@ -127,7 +134,7 @@ contract Node is BridgeManager {
         uint256[8] memory nullifiers,
         ProofCommitment memory proof
     ) external {
-        (uint256 remainingCommitment,) = IZKERC20(zkerc20)._bridge(
+        (uint256 remainingCommitment, uint256 index) = IZKERC20(zkerc20)._bridge(
             leftCommitment,
             rightCommitment,
             nullifiers,
@@ -146,21 +153,23 @@ contract Node is BridgeManager {
     // UTILITY FUNCTIONS
 
 
-    function _unwrapToken(address token) internal returns (address unwrappedToken) {
-        unwrappedToken = nativeToUnwrapped[token];
-        if (unwrappedToken == address(0)) {
-            // need to deploy a new unwrapped ZK token
-            string memory origName = ERC20(token).name();
-            string memory newName = string(abi.encodePacked("uwZK", origName));
-            unwrappedToken = address(new uwERC20
-                {salt: keccak256(abi.encodePacked(newName))}
-                (newName, ERC20(token).symbol()
-            ));
-
-            nativeToUnwrapped[token] = unwrappedToken;
-            unwrappedToNative[unwrappedToken] = token;
-            isNative[unwrappedToken] = true;
+    function _wrapToken(address token) internal returns (address wrappedToken) {
+        wrappedToken = nativeToWrapped[token];
+        if (wrappedToken == address(0)) {
+            // need to deploy a new wrapped ZK token
+            wrappedToken = _deployNewWrappedToken(token);
+            nativeToWrapped[token] = wrappedToken;
+            wrappedToNative[wrappedToken] = token;
+            isNative[wrappedToken] = true;
         }
+    }
+
+
+    function _deployNewWrappedToken(address token) internal virtual returns (address) {
+        return address(new WZKERC20
+            {salt: keccak256(abi.encodePacked(uint256(0xdeadbeef), token))}
+            ()
+        );
     }
 }
 
