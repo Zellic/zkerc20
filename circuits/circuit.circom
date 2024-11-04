@@ -107,9 +107,6 @@ template Split(height, notes) {
     signal input rightSalt;
     signal input rightCommitment;
 
-    assert(leftAmount < 2 ** 100);
-    assert(rightAmount < 2 ** 100);
-
     // should be hash(sender, amount, salt)
     signal input nullifiers[notes];
 
@@ -151,6 +148,11 @@ template Split(height, notes) {
 
         totalAmount += amounts[i];
     }
+
+    // check that the amounts are not too large
+    let maxAmount = 2 ** 100;
+    leftAmount < maxAmount;
+    rightAmount < maxAmount;
 
     // check that the total amount is preserved
     totalAmount === leftAmount + rightAmount;
