@@ -66,7 +66,6 @@ template MerkleRoot(height) {
 }
 
 template Commitment() {
-    signal input sender;
     signal input asset;
     signal input amount;
     signal input salt;
@@ -75,10 +74,9 @@ template Commitment() {
     signal output commitment;
 
     component nullifierHasher = Poseidon(4);
-    nullifierHasher.inputs[0] <== sender;
-    nullifierHasher.inputs[1] <== asset;
-    nullifierHasher.inputs[2] <== amount;
-    nullifierHasher.inputs[3] <== salt;
+    nullifierHasher.inputs[0] <== asset;
+    nullifierHasher.inputs[1] <== amount;
+    nullifierHasher.inputs[2] <== salt;
     nullifier <== nullifierHasher.out;
 
     component commitmentHasher = Poseidon(2);
@@ -93,29 +91,26 @@ template Commitment() {
 template Split(height, notes) {
     // notes in
     signal input root;
-    signal input sender;
-    signal input asset;
-    signal input amounts[notes];
-    signal input salts[notes];
+    signal private input asset;
+    signal private input amounts[notes];
+    signal private input salts[notes];
 
     // note left
-    signal input leftRecipient;
-    signal input leftAmount;
-    signal input leftSalt;
+    signal private input leftAmount;
+    signal private input leftSalt;
     signal input leftCommitment;
 
     // note right
-    signal input rightRecipient;
-    signal input rightAmount;
-    signal input rightSalt;
+    signal private input rightAmount;
+    signal private input rightSalt;
     signal input rightCommitment;
 
-    // should be hash(sender, amount, salt)
+    // should be hash(amount, salt)
     signal input nullifiers[notes];
 
     // leaf of the tree is hash(nullifier, salt)
-    signal input path[notes][height];
-    signal input sides[notes][height];
+    signal private input path[notes][height];
+    signal private input sides[notes][height];
 
     component commitments[notes];
     component verifiers[notes];
@@ -126,7 +121,6 @@ template Split(height, notes) {
     for (var i = 0; i < notes; i++) {
         // check that the nullifier is correct
         commitments[i] = Commitment();
-        commitments[i].sender <== sender;
         commitments[i].asset <== asset;
         commitments[i].amount <== amounts[i];
         commitments[i].salt <== salts[i];
@@ -161,14 +155,12 @@ template Split(height, notes) {
 
     // verify that the commitments are correct
     component left = Commitment();
-    left.sender <== leftRecipient;
     left.asset <== asset;
     left.amount <== leftAmount;
     left.salt <== leftSalt;
     left.commitment === leftCommitment;
 
     component right = Commitment();
-    right.sender <== rightRecipient;
     right.asset <== asset;
     right.amount <== rightAmount;
     right.salt <== rightSalt;
@@ -178,7 +170,6 @@ template Split(height, notes) {
 component main {
     public [
         root, // contract checks this is the current commitment
-        sender, // contract checks this is the sender
         leftCommitment, // contract inserts this into the commitment
         rightCommitment, // contract inserts this into the commitment
         nullifiers // contract marks these as spent
