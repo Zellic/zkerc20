@@ -9,7 +9,7 @@ contract ZKERC20 is IZKERC20, TransactionKeeper {
 
     event Mint(address indexed asset, address indexed to, uint256 amount);
     event Mint();
-    event Burn(address indexed asset, address indexed from, uint256 amount);
+    event Burn(address indexed asset uint256 amount);
     event Transfer();
 
     modifier onlyNode() {
@@ -26,6 +26,7 @@ contract ZKERC20 is IZKERC20, TransactionKeeper {
     // NODE-ONLY FUNCTIONS
 
 
+    // TODO: will need to delete this
     function _mint(
         address asset,
         address to,
@@ -50,19 +51,15 @@ contract ZKERC20 is IZKERC20, TransactionKeeper {
 
     function _burn(
         address asset,
-        address from,
         uint256 amount,
-        uint256 salt,
         uint256 remainderCommitment,
         uint256[8] memory nullifier,
         ProofCommitment memory proof
     ) external onlyNode returns (uint256) {
-        emit Burn(asset, from, amount);
+        emit Burn(asset, amount);
         return TransactionKeeper.drop(
-            from,
             asset,
             amount,
-            salt,
             remainderCommitment,
             nullifier,
             proof
@@ -78,7 +75,6 @@ contract ZKERC20 is IZKERC20, TransactionKeeper {
     ) external override onlyNode returns (uint256, uint256) {
         emit Transfer();
         return TransactionKeeper.bridge(
-            msg.sender, // TODO: current limitation: we must reveal the sender here. Client must bundle with transferFrom
             leftCommitment,
             rightCommitment,
             nullifier,
@@ -92,7 +88,6 @@ contract ZKERC20 is IZKERC20, TransactionKeeper {
 
 
     function transferFrom(
-        address spender, // TODO: don't want to reveal this?
         uint256 payoutCommitment,
         uint256 remainderCommitment,
         uint256[8] memory nullifier,
@@ -100,7 +95,6 @@ contract ZKERC20 is IZKERC20, TransactionKeeper {
     ) external returns (uint256 payoutIndex, uint256 remainderIndex) {
         emit Transfer();
         return TransactionKeeper.split(
-            spender,
             payoutCommitment,
             remainderCommitment,
             nullifier,

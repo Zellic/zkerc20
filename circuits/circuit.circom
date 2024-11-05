@@ -105,7 +105,7 @@ template Split(height, notes) {
     signal private input rightSalt;
     signal input rightCommitment;
 
-    // should be hash(amount, salt)
+    // should be hash(asset, amount, salt)
     signal input nullifiers[notes];
 
     // leaf of the tree is hash(nullifier, salt)
@@ -117,7 +117,7 @@ template Split(height, notes) {
 
     signal merkleValid[notes];
 
-    var totalAmount = 0;
+    var totalInputAmount = 0;
     for (var i = 0; i < notes; i++) {
         // check that the nullifier is correct
         commitments[i] = Commitment();
@@ -125,6 +125,9 @@ template Split(height, notes) {
         commitments[i].amount <== amounts[i];
         commitments[i].salt <== salts[i];
         commitments[i].nullifier === nullifiers[i];
+
+        // check that the commitment is not from the burn salt
+        commitments[i].salt !== 0;
 
         // check that the commitment is in the tree
         verifiers[i] = MerkleRoot(height);
@@ -140,9 +143,9 @@ template Split(height, notes) {
         merkleValid[i] * amounts[i] === 0;
 
         // overflow check (TODO: is this the best way?)
-        totalAmount + amounts[i] >== totalAmount
-        totalAmount + amounts[i] >== amounts[i]
-        totalAmount += amounts[i];
+        totalInputAmount + amounts[i] >== totalInputAmount
+        totalInputAmount + amounts[i] >== amounts[i]
+        totalInputAmount += amounts[i];
     }
 
     // check that the amounts are not too large
@@ -151,7 +154,7 @@ template Split(height, notes) {
     rightAmount < maxAmount;
 
     // check that the total amount is preserved
-    totalAmount === leftAmount + rightAmount;
+    totalInputAmount === leftAmount + rightAmount;
 
     // verify that the commitments are correct
     component left = Commitment();
@@ -165,6 +168,16 @@ template Split(height, notes) {
     right.amount <== rightAmount;
     right.salt <== rightSalt;
     right.commitment === rightCommitment;
+
+    // check that the nullifier will be unique
+    // XXX: this isn't strictly necessary, just a sanity check
+    // TODO: remove once things are working
+    // XXX: this will actually break burning a full note
+    left.nullifier !== right.nullifier;
+    for (var i = 0; i < notes; i++) {
+        left.nullifier !== nullifiers[i];
+        right.nullifier !== nullifiers[i];
+    }
 }
 
 component main {

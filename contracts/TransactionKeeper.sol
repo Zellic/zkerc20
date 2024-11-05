@@ -25,7 +25,6 @@ contract TransactionKeeper is MerkleTree(30) {
         uint256 commitment,
         uint256 index,
 
-        address spender,
         address asset,
         uint256 amount,
         uint256 salt
@@ -48,8 +47,7 @@ contract TransactionKeeper is MerkleTree(30) {
     }
 
 
-    function checkProof(
-        address spender,
+    function _checkProof(
         uint256 leftCommitment,
         uint256 rightCommitment,
         uint256[8] memory nullifiers,
@@ -61,7 +59,6 @@ contract TransactionKeeper is MerkleTree(30) {
             proof.c,
             [
                 MerkleTree.root,
-                uint256(uint160(spender)),
                 leftCommitment,
                 rightCommitment,
                 nullifiers[0],
@@ -87,15 +84,13 @@ contract TransactionKeeper is MerkleTree(30) {
 
 
     function split(
-        address spender,
         uint256 leftCommitment,
         uint256 rightCommitment,
         uint256[8] memory nullifiers,
         ProofCommitment memory proof
     ) internal returns (uint256 leftIndex, uint256 rightIndex) {
         require(
-            checkProof(
-                spender,
+            _checkProof(
                 leftCommitment,
                 rightCommitment,
                 nullifiers,
@@ -112,22 +107,14 @@ contract TransactionKeeper is MerkleTree(30) {
     }
 
 
-    /*
-     * This reveals the spender. It's difficult to get around this. We 
-     * recommend transferring to then bridging from an ephemeral address. The 
-     * secret/salt isn't sufficient to prevent this because it's known on the 
-     * first mint (when you first use the protocol).
-     */
     function bridge(
-        address spender,
         uint256 leftCommitment,
         uint256 rightCommitment,
         uint256[8] memory nullifiers,
         ProofCommitment memory proof
     ) internal returns (uint256 remainingCommitment, uint256 rightIndex) {
         require(
-            checkProof(
-                spender,
+            _checkProof(
                 leftCommitment,
                 rightCommitment,
                 nullifiers,
@@ -143,33 +130,21 @@ contract TransactionKeeper is MerkleTree(30) {
     }
 
 
-    /*
-     * Drop reveals salt which reveals last transfer. Ideas:
-     * 1. Move amount outside the nullifier
-     * 2. Use ephemeral transfer/address 
-     * 
-     * Wait, is that true? leftCommitment is just burning by transferring to 0.
-     * Salt doesn't matter. Why don't we just hardcode as 0? TODO/XXX
-     */
     function drop(
-        address spender,
         address asset,
         uint256 amount,
-        uint256 salt, // XXX: this doesn't need to be specified right?
         uint256 rightCommitment,
         uint256[8] memory nullifiers, // TODO: we shouldn't hardcode this array size
         ProofCommitment memory proof
     ) internal returns (uint256 rightIndex) {
         uint256 leftCommitment = _commitment(
-            0,
             uint256(uint160(asset)),
             uint256(amount),
-            salt
+            0 // salt (0 is the burn salt)
         );
 
         require(
-            checkProof(
-                spender,
+            _checkProof(
                 leftCommitment,
                 rightCommitment,
                 nullifiers,
@@ -184,17 +159,16 @@ contract TransactionKeeper is MerkleTree(30) {
     }
 
 
+    // TODO: this function won't be necessary soon
     function insert(
-        address spender,
         address asset,
         uint256 amount,
         uint256 salt
     ) internal returns (uint256 index) {
         uint256 commitment = _commitment(
-            uint256(uint160(spender)),
             uint256(uint160(asset)),
             amount,
-            salt
+            salt // TODO: this will be offchain
         );
 
         index = _insert(commitment);
@@ -202,7 +176,6 @@ contract TransactionKeeper is MerkleTree(30) {
         emit PublicTransaction (
             commitment,
             index,
-            spender,
             asset,
             amount,
             salt
@@ -231,23 +204,21 @@ contract TransactionKeeper is MerkleTree(30) {
 
 
     function _nullifier(
-        uint256 sender,
         uint256 asset,
         uint256 amount,
         uint256 salt
     ) public view returns (uint256) {
-        return poseidonFour.poseidon([sender, asset, amount, salt]);
+        return poseidonFour.poseidon([asset, amount, salt]);
     }
 
 
     function _commitment(
-        uint256 sender,
         uint256 asset,
         uint256 amount,
         uint256 salt
     ) public view returns (uint256) {
         return poseidonTwo.poseidon([
-            poseidonFour.poseidon([sender, asset, amount, salt]),
+            _nullifier(asset, amount, salt),
             salt
         ]);
     }

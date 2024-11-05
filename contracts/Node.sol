@@ -59,13 +59,13 @@ contract Node is BridgeManager {
         if (originalToken != address(0)) {
             // we're re-wrapping a token
             IWZKERC20(token).burn(msg.sender, amount);
-            receipt = IZKERC20(zkerc20)._mint(originalToken, msg.sender, amount, salt);
+            receipt = IZKERC20(zkerc20)._mint(originalToken, msg.sender, amount, salt); // TODO: will need to update this
         } else {
             // we're wrapping a native token
             IERC20(token).safeTransferFrom(msg.sender, address(this), amount);
 
             isNative[token] = true;
-            receipt = IZKERC20(zkerc20)._mint(token, msg.sender, amount, salt);
+            receipt = IZKERC20(zkerc20)._mint(token, msg.sender, amount, salt); // TODO: will need to update this
         }
     }
 
@@ -81,20 +81,16 @@ contract Node is BridgeManager {
     // UNLOCKING
 
 
-    // TODO: support burning partial note too?
     function unlock(
         address token,
         uint256 amount,
-        uint256 salt,
         uint256 remainderCommitment,
         uint256[8] memory nullifier,
         ProofCommitment memory proof
     ) external {
         IZKERC20(zkerc20)._burn(
             token,
-            msg.sender,
             amount,
-            salt,
             remainderCommitment,
             nullifier,
             proof
@@ -129,8 +125,8 @@ contract Node is BridgeManager {
     function bridge(
         uint8 bridgeId,
         uint256 destChainId, // TODO: use bridgeId for upper bits (gas opt)
-        uint256 leftCommitment,
-        uint256 rightCommitment,
+        uint256 leftCommitment, // commitment to store on local chain
+        uint256 rightCommitment, // commitment to send to dest chain
         uint256[8] memory nullifiers,
         ProofCommitment memory proof
     ) external {
@@ -142,7 +138,7 @@ contract Node is BridgeManager {
         );
         BridgeManager._sendMessage(
             bridgeId, 
-            msg.sender, // only used for refunds
+            msg.sender, // NOTE: only used for refunds
             destChainId,
             remainingCommitment
         );
