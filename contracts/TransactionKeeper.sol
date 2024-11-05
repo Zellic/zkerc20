@@ -147,14 +147,17 @@ contract TransactionKeeper is MerkleTree(30) {
      * Drop reveals salt which reveals last transfer. Ideas:
      * 1. Move amount outside the nullifier
      * 2. Use ephemeral transfer/address 
+     * 
+     * Wait, is that true? leftCommitment is just burning by transferring to 0.
+     * Salt doesn't matter. Why don't we just hardcode as 0? TODO/XXX
      */
     function drop(
         address spender,
         address asset,
         uint256 amount,
-        uint256 salt,
+        uint256 salt, // XXX: this doesn't need to be specified right?
         uint256 rightCommitment,
-        uint256[8] memory nullifiers,
+        uint256[8] memory nullifiers, // TODO: we shouldn't hardcode this array size
         ProofCommitment memory proof
     ) internal returns (uint256 rightIndex) {
         uint256 leftCommitment = _commitment(
