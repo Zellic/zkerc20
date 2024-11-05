@@ -87,6 +87,9 @@ template Commitment() {
     commitment <== commitmentHasher.out;
 }
 
+// a. takes an arbitrary number of input commitments+nullifiers
+// b. checks that the commitment is in the tree
+// c. 
 template Split(height, notes) {
     // notes in
     signal input root;
@@ -121,17 +124,17 @@ template Split(height, notes) {
 
     var totalAmount = 0;
     for (var i = 0; i < notes; i++) {
+        // check that the nullifier is correct
         commitments[i] = Commitment();
         commitments[i].sender <== sender;
         commitments[i].asset <== asset;
         commitments[i].amount <== amounts[i];
         commitments[i].salt <== salts[i];
-
         commitments[i].nullifier === nullifiers[i];
 
+        // check that the commitment is in the tree
         verifiers[i] = MerkleRoot(height);
         verifiers[i].value <== commitments[i].commitment;
-
         for (var j = 0; j < height; j++) {
             verifiers[i].path[j] <== path[i][j];
             verifiers[i].sides[j] <== sides[i][j];
@@ -145,7 +148,6 @@ template Split(height, notes) {
         // overflow check (TODO: is this the best way?)
         totalAmount + amounts[i] >== totalAmount
         totalAmount + amounts[i] >== amounts[i]
-
         totalAmount += amounts[i];
     }
 
