@@ -7,7 +7,7 @@ contract ZKERC20 is IZKERC20, TransactionKeeper {
     address public immutable node;
     uint256 public constant DEFAULT_SECRET = 0;
 
-    event Mint(address indexed asset, address indexed to, uint256 amount);
+    event Mint(address indexed asset, uint256 amount);
     event Mint();
     event Burn(address indexed asset uint256 amount);
     event Transfer();
@@ -26,19 +26,18 @@ contract ZKERC20 is IZKERC20, TransactionKeeper {
     // NODE-ONLY FUNCTIONS
 
 
-    // TODO: will need to delete this
     function _mint(
         address asset,
-        address to,
         uint256 amount,
-        uint256 salt
+        uint256 commitment,
+        ProofCommitment memory proof
     ) external onlyNode returns (uint256) {
-        emit Mint(asset, to, amount);
+        emit Mint(asset, amount);
         return TransactionKeeper.insert(
-            to,
             asset,
             amount,
-            salt
+            commitment,
+            proof
         );
     }
 
@@ -68,15 +67,15 @@ contract ZKERC20 is IZKERC20, TransactionKeeper {
 
 
     function _bridge(
-        uint256 leftCommitment,
-        uint256 rightCommitment,
+        uint256 localCommitment,
+        uint256 remoteCommitment,
         uint256[8] memory nullifier,
         ProofCommitment memory proof
     ) external override onlyNode returns (uint256, uint256) {
         emit Transfer();
         return TransactionKeeper.bridge(
-            leftCommitment,
-            rightCommitment,
+            localCommitment,
+            remoteCommitment,
             nullifier,
             proof
         );

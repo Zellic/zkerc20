@@ -27,7 +27,6 @@ contract TransactionKeeper is MerkleTree(30) {
 
         address asset,
         uint256 amount,
-        uint256 salt
     );
 
 
@@ -74,6 +73,8 @@ contract TransactionKeeper is MerkleTree(30) {
 
         if (!valid) { return false; }
 
+        // ensures nullifiers are unique (no duplicates in the array) after proof 
+        // verification
         for (uint256 i = 0; i < nullifiers.length; i++) {
             if (spent[nullifiers[i]]) { return false; }
             spent[nullifiers[i]] = true;
@@ -81,6 +82,43 @@ contract TransactionKeeper is MerkleTree(30) {
 
         return true;
     }
+
+
+    // checks that the leftCommitment simply has the right amount and asset,
+    // without revealing the salt
+    function _checkInsertProof(
+        address asset,
+        uint256 amount,
+        uint256 leftCommitment,
+        ProofCommitment memory proof
+    ) private returns (bool) {
+        // construct a merkle trie with one input note
+        (uint256 inputCommitment, uint256 inputNullifier) = _commitment(
+            uint256(uint160(asset)),
+            amount,
+            0x1 // salt. Can't have burn salt (0) here, but it doesn't matter what it is
+        );
+
+        // rightCommitment is just a hardcoded 0 salt, 0 amount commitment
+        (uint256 rightCommitment,) = _commitment(
+            uint256(uint160(asset)),
+            0, // amount
+            0 // salt (0 is the burn salt)
+        );
+
+        return verifier.verifyProof(
+            proof.a,
+            proof.b,
+            proof.c,
+            [
+                inputCommitment,
+                leftCommitment,
+                rightCommitment, // empty commitment
+                inputNullifier, 0, 0, 0, 0, 0, 0, 0 // nullifiers[8]
+            ]
+        );
+    }
+        
 
 
     function split(
@@ -96,7 +134,7 @@ contract TransactionKeeper is MerkleTree(30) {
                 nullifiers,
                 proof
             ),
-            "Invalid proof"
+            "Invalid proof (split)"
         );
 
         leftIndex = _insert(leftCommitment);
@@ -108,28 +146,29 @@ contract TransactionKeeper is MerkleTree(30) {
 
 
     function bridge(
-        uint256 leftCommitment,
-        uint256 rightCommitment,
+        uint256 localCommitment, // right commitment
+        uint256 remoteCommitment, // left commitment
         uint256[8] memory nullifiers,
         ProofCommitment memory proof
-    ) internal returns (uint256 remainingCommitment, uint256 rightIndex) {
+    ) internal returns (uint256 localIndex) {
         require(
             _checkProof(
-                leftCommitment,
-                rightCommitment,
+                remoteCommitment,
+                localCommitment,
                 nullifiers,
                 proof
             ),
-            "Invalid proof"
+            "Invalid proof (bridge)"
         );
 
-        remainingCommitment = leftCommitment;
-        rightIndex = _insert(rightCommitment);
+        localIndex = _insert(localCommitment);
 
-        emit Transaction(rightCommitment, rightIndex);
+        emit Transaction(localCommitment, localIndex);
     }
 
 
+    // burns using the left commitment (0 salt)
+    // remaining funds from input notes (in nullifiers) goes to right commitment
     function drop(
         address asset,
         uint256 amount,
@@ -137,7 +176,7 @@ contract TransactionKeeper is MerkleTree(30) {
         uint256[8] memory nullifiers, // TODO: we shouldn't hardcode this array size
         ProofCommitment memory proof
     ) internal returns (uint256 rightIndex) {
-        uint256 leftCommitment = _commitment(
+        (uint256 leftCommitment,) = _commitment(
             uint256(uint160(asset)),
             uint256(amount),
             0 // salt (0 is the burn salt)
@@ -150,35 +189,45 @@ contract TransactionKeeper is MerkleTree(30) {
                 nullifiers,
                 proof
             ),
-            "Invalid proof"
+            "Invalid proof (drop)"
         );
 
         rightIndex = _insert(rightCommitment);
 
-        emit Transaction(rightCommitment, rightIndex);
+        emit PublicTransaction (
+            rightCommitment,
+            rightIndex,
+            asset,
+            amount
+        );
     }
 
 
-    // TODO: this function won't be necessary soon
+    // mints by checking that the left commitment has the right amount and
+    // asset, without revealing the salt, then inserting
     function insert(
         address asset,
         uint256 amount,
-        uint256 salt
+        uint256 leftCommitment,
+        ProofCommitment memory proof
     ) internal returns (uint256 index) {
-        uint256 commitment = _commitment(
-            uint256(uint160(asset)),
-            amount,
-            salt // TODO: this will be offchain
+        require(
+            _checkInsertProof(
+                asset,
+                amount,
+                leftCommitment,
+                proof
+            ),
+            "Invalid proof (insert)"
         );
 
-        index = _insert(commitment);
+        index = _insert(leftCommitment);
 
         emit PublicTransaction (
-            commitment,
+            leftCommitment,
             index,
             asset,
-            amount,
-            salt
+            amount
         );
     }
 
@@ -216,9 +265,10 @@ contract TransactionKeeper is MerkleTree(30) {
         uint256 asset,
         uint256 amount,
         uint256 salt
-    ) public view returns (uint256) {
-        return poseidonTwo.poseidon([
-            _nullifier(asset, amount, salt),
+    ) public view returns (uint256 commitment, uint256 nullifier) {
+        nullifier = _nullifier(asset, amount, salt);
+        commitment = poseidonTwo.poseidon([
+            nullifier,
             salt
         ]);
     }

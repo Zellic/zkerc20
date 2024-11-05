@@ -29,19 +29,34 @@ contract Node is BridgeManager {
     // LOCKING
 
 
-    function lock(address token, uint256 amount, uint256 salt) external returns (uint256 receipt) {
+    function lock(
+        address token,
+        uint256 amount,
+        uint256 commitment,
+        ProofCommitment memory proof
+    ) external returns (uint256 receipt) {
         // take the user's original ERC20 tokens
         address originalToken = wrappedToNative[token];
         if (originalToken != address(0)) {
             // we're re-wrapping a token
             IWZKERC20(token).burn(msg.sender, amount);
-            receipt = IZKERC20(zkerc20)._mint(originalToken, msg.sender, amount, salt); // TODO: will need to update this
+            receipt = IZKERC20(zkerc20)._mint(
+                originalToken,
+                amount,
+                commitment,
+                proof
+            );
         } else {
             // we're wrapping a native token
             IERC20(token).safeTransferFrom(msg.sender, address(this), amount);
 
             isNative[token] = true;
-            receipt = IZKERC20(zkerc20)._mint(token, msg.sender, amount, salt); // TODO: will need to update this
+            receipt = IZKERC20(zkerc20)._mint(
+                token,
+                amount,
+                commitment,
+                proof
+            );
         }
     }
 
@@ -101,22 +116,23 @@ contract Node is BridgeManager {
     function bridge(
         uint8 bridgeId,
         uint256 destChainId, // TODO: use bridgeId for upper bits (gas opt)
-        uint256 leftCommitment, // commitment to store on local chain
-        uint256 rightCommitment, // commitment to send to dest chain
+        uint256 localCommitment, // commitment to store on local chain
+        uint256 remoteCommitment, // commitment to send to dest chain
         uint256[8] memory nullifiers,
         ProofCommitment memory proof
     ) external {
-        (uint256 remainingCommitment, uint256 index) = IZKERC20(zkerc20)._bridge(
-            leftCommitment,
-            rightCommitment,
+        IZKERC20(zkerc20)._bridge(
+            localCommitment,
+            remoteCommitment,
             nullifiers,
             proof
         );
+
         BridgeManager._sendMessage(
             bridgeId, 
             msg.sender, // NOTE: only used for refunds
             destChainId,
-            remainingCommitment
+            remoteCommitment
         );
     }
 
