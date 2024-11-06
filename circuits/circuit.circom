@@ -117,64 +117,60 @@ template Split(MAX_HEIGHT, NUM_NOTES) {
     signal merkleValid[NUM_NOTES];
 
 
-    // Skip the checks if the nullifier is zero. This is used to allow 
-    // inserting new commitments into the trie when locking new funds.
-    if (nullifiers[0] != 0) {
-        var totalInputAmount = 0;
+    var totalInputAmount = 0;
 
-        // off-chain, nullifiers are checked to be unique
-        for (var i = 0; i < NUM_NOTES; i++) {
-            // check that the nullifier is correct
-            commitments[i] = Commitment();
-            commitments[i].asset <== asset;
-            commitments[i].amount <== amounts[i];
-            commitments[i].salt <== salts[i];
-            commitments[i].nullifier === nullifiers[i];
+    // off-chain, nullifiers are checked to be unique
+    for (var i = 0; i < NUM_NOTES; i++) {
+        // check that the nullifier is correct
+        commitments[i] = Commitment();
+        commitments[i].asset <== asset;
+        commitments[i].amount <== amounts[i];
+        commitments[i].salt <== salts[i];
+        commitments[i].nullifier === nullifiers[i];
 
-            // check that the commitment is not from the burn salt
-            component saltCheck = GreaterThan(256);
-            saltCheck.in[0] <== commitments[i].salt;
-            saltCheck.in[1] <== 0;
-            saltCheck.out === 1; // TODO: is 1 true?
+        // check that the commitment is not from the burn salt
+        component saltCheck = GreaterThan(256);
+        saltCheck.in[0] <== commitments[i].salt;
+        saltCheck.in[1] <== 0;
+        saltCheck.out === 1; // TODO: is 1 true?
 
-            // check that the commitment is in the tree
-            verifiers[i] = MerkleRoot(MAX_HEIGHT);
-            verifiers[i].value <== commitments[i].commitment;
-            for (var j = 0; j < MAX_HEIGHT; j++) {
-                verifiers[i].path[j] <== path[i][j];
-                verifiers[i].sides[j] <== sides[i][j];
-            }
-
-            // either the commitment is in the tree
-            // or it represents zero tokens
-            merkleValid[i] <== verifiers[i].root - root;
-            merkleValid[i] * amounts[i] === 0;
-
-            // overflow check (TODO: is this the best way?)
-            component overflowCheck = LessThan(256);
-            overflowCheck.in[0] <== amounts[i];
-            overflowCheck.in[1] <== 2 ** 256 - totalInputAmount - 1;
-            overflowCheck.out === 1; // TODO: is 1 true?
-
-            totalInputAmount += amounts[i];
+        // check that the commitment is in the tree
+        verifiers[i] = MerkleRoot(MAX_HEIGHT);
+        verifiers[i].value <== commitments[i].commitment;
+        for (var j = 0; j < MAX_HEIGHT; j++) {
+            verifiers[i].path[j] <== path[i][j];
+            verifiers[i].sides[j] <== sides[i][j];
         }
 
-        // check that the amounts are not too large
-        // TODO: is there a better way to do this
-        var maxAmount = 2 ** 256 / 2 - 1;
-        component leftTotalAmountCheck = LessThan(256);
-        totalAmountCheck.in[0] <== leftAmount;
-        totalAmountCheck.in[1] <== maxAmount;
-        totalAmountCheck.out === 1; // TODO: is 1 true?
+        // either the commitment is in the tree
+        // or it represents zero tokens
+        merkleValid[i] <== verifiers[i].root - root;
+        merkleValid[i] * amounts[i] === 0;
 
-        component rightTotalAmountCheck = LessThan(256);
-        totalAmountCheck.in[0] <== rightAmount;
-        totalAmountCheck.in[1] <== maxAmount;
-        totalAmountCheck.out === 1; // TODO: is 1 true?
+        // overflow check (TODO: is this the best way?)
+        component overflowCheck = LessThan(256);
+        overflowCheck.in[0] <== amounts[i];
+        overflowCheck.in[1] <== 2 ** 256 - totalInputAmount - 1;
+        overflowCheck.out === 1; // TODO: is 1 true?
 
-        // check that the total amount is preserved
-        totalInputAmount === leftAmount + rightAmount;
+        totalInputAmount += amounts[i];
     }
+
+    // check that the amounts are not too large
+    // TODO: is there a better way to do this
+    var maxAmount = 2 ** 256 / 2 - 1;
+    component leftTotalAmountCheck = LessThan(256);
+    totalAmountCheck.in[0] <== leftAmount;
+    totalAmountCheck.in[1] <== maxAmount;
+    totalAmountCheck.out === 1; // TODO: is 1 true?
+
+    component rightTotalAmountCheck = LessThan(256);
+    totalAmountCheck.in[0] <== rightAmount;
+    totalAmountCheck.in[1] <== maxAmount;
+    totalAmountCheck.out === 1; // TODO: is 1 true?
+
+    // check that the total amount is preserved
+    totalInputAmount === leftAmount + rightAmount;
 
     // verify that the commitments are correct
     component left = Commitment();
