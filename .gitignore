@@ -17,3 +17,5 @@ package_lock.json
 
 circuits/final.ptau
 artifacts/
+
+package-lock.json

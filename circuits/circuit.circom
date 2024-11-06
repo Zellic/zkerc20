@@ -5,6 +5,7 @@ pragma circom 2.1.9;
 include "../node_modules/circomlib/circuits/bitify.circom";
 include "../node_modules/circomlib/circuits/mimcsponge.circom";
 include "../node_modules/circomlib/circuits/poseidon.circom";
+include "../node_modules/circomlib/circuits/comparators.circom";
 
 template HashTwo() {
     signal input left;
@@ -36,20 +37,20 @@ template HashCheck() {
     again.outs[0] === hash;
 }
 
-template MerkleRoot(height) {
+template MerkleRoot(MAX_HEIGHT) {
     signal input value;
 
-    signal input path[height];
-    signal input sides[height];
+    signal input path[MAX_HEIGHT];
+    signal input sides[MAX_HEIGHT];
 
     signal output root;
 
-    signal hash[height + 1];
-    component hasher[height];
+    signal hash[MAX_HEIGHT + 1];
+    component hasher[MAX_HEIGHT];
 
     hash[0] <== value;
 
-    for (var i = 0; i < height; i++) {
+    for (var i = 0; i < MAX_HEIGHT; i++) {
         // the side must be zero or one
         sides[i] * (1 - sides[i]) === 0;
 
@@ -62,7 +63,7 @@ template MerkleRoot(height) {
         hash[i + 1] <== hasher[i].hash;
     }
 
-    root <== hash[height];
+    root <== hash[MAX_HEIGHT];
 }
 
 template Commitment() {
@@ -85,76 +86,95 @@ template Commitment() {
     commitment <== commitmentHasher.out;
 }
 
-// a. takes an arbitrary number of input commitments+nullifiers
-// b. checks that the commitment is in the tree
-// c. 
-template Split(height, notes) {
-    // notes in
+// TODO: refactor into separate file
+template Split(MAX_HEIGHT, NUM_NOTES) {
+    // NUM_NOTES in
     signal input root;
-    signal private input asset;
-    signal private input amounts[notes];
-    signal private input salts[notes];
+    signal input asset; // private
+    signal input amounts[NUM_NOTES]; // private
+    signal input salts[NUM_NOTES]; // private
 
     // note left
-    signal private input leftAmount;
-    signal private input leftSalt;
+    signal input leftAmount; // private
+    signal input leftSalt; // private
     signal input leftCommitment;
 
     // note right
-    signal private input rightAmount;
-    signal private input rightSalt;
+    signal input rightAmount; // private
+    signal input rightSalt; // private
     signal input rightCommitment;
 
     // should be hash(asset, amount, salt)
-    signal input nullifiers[notes];
+    signal input nullifiers[NUM_NOTES];
 
     // leaf of the tree is hash(nullifier, salt)
-    signal private input path[notes][height];
-    signal private input sides[notes][height];
+    signal input path[NUM_NOTES][MAX_HEIGHT];
+    signal input sides[NUM_NOTES][MAX_HEIGHT];
 
-    component commitments[notes];
-    component verifiers[notes];
+    component commitments[NUM_NOTES];
+    component verifiers[NUM_NOTES];
 
-    signal merkleValid[notes];
+    signal merkleValid[NUM_NOTES];
 
-    var totalInputAmount = 0;
-    for (var i = 0; i < notes; i++) {
-        // check that the nullifier is correct
-        commitments[i] = Commitment();
-        commitments[i].asset <== asset;
-        commitments[i].amount <== amounts[i];
-        commitments[i].salt <== salts[i];
-        commitments[i].nullifier === nullifiers[i];
 
-        // check that the commitment is not from the burn salt
-        commitments[i].salt !== 0;
+    // Skip the checks if the nullifier is zero. This is used to allow 
+    // inserting new commitments into the trie when locking new funds.
+    if (nullifiers[0] != 0) {
+        var totalInputAmount = 0;
 
-        // check that the commitment is in the tree
-        verifiers[i] = MerkleRoot(height);
-        verifiers[i].value <== commitments[i].commitment;
-        for (var j = 0; j < height; j++) {
-            verifiers[i].path[j] <== path[i][j];
-            verifiers[i].sides[j] <== sides[i][j];
+        // off-chain, nullifiers are checked to be unique
+        for (var i = 0; i < NUM_NOTES; i++) {
+            // check that the nullifier is correct
+            commitments[i] = Commitment();
+            commitments[i].asset <== asset;
+            commitments[i].amount <== amounts[i];
+            commitments[i].salt <== salts[i];
+            commitments[i].nullifier === nullifiers[i];
+
+            // check that the commitment is not from the burn salt
+            component saltCheck = GreaterThan(256);
+            saltCheck.in[0] <== commitments[i].salt;
+            saltCheck.in[1] <== 0;
+            saltCheck.out === 1; // TODO: is 1 true?
+
+            // check that the commitment is in the tree
+            verifiers[i] = MerkleRoot(MAX_HEIGHT);
+            verifiers[i].value <== commitments[i].commitment;
+            for (var j = 0; j < MAX_HEIGHT; j++) {
+                verifiers[i].path[j] <== path[i][j];
+                verifiers[i].sides[j] <== sides[i][j];
+            }
+
+            // either the commitment is in the tree
+            // or it represents zero tokens
+            merkleValid[i] <== verifiers[i].root - root;
+            merkleValid[i] * amounts[i] === 0;
+
+            // overflow check (TODO: is this the best way?)
+            component overflowCheck = LessThan(256);
+            overflowCheck.in[0] <== amounts[i];
+            overflowCheck.in[1] <== 2 ** 256 - totalInputAmount - 1;
+            overflowCheck.out === 1; // TODO: is 1 true?
+
+            totalInputAmount += amounts[i];
         }
 
-        // either the commitment is in the tree
-        // or it represents zero tokens
-        merkleValid[i] <== verifiers[i].root - root;
-        merkleValid[i] * amounts[i] === 0;
+        // check that the amounts are not too large
+        // TODO: is there a better way to do this
+        var maxAmount = 2 ** 256 / 2 - 1;
+        component leftTotalAmountCheck = LessThan(256);
+        totalAmountCheck.in[0] <== leftAmount;
+        totalAmountCheck.in[1] <== maxAmount;
+        totalAmountCheck.out === 1; // TODO: is 1 true?
 
-        // overflow check (TODO: is this the best way?)
-        totalInputAmount + amounts[i] >== totalInputAmount
-        totalInputAmount + amounts[i] >== amounts[i]
-        totalInputAmount += amounts[i];
+        component rightTotalAmountCheck = LessThan(256);
+        totalAmountCheck.in[0] <== rightAmount;
+        totalAmountCheck.in[1] <== maxAmount;
+        totalAmountCheck.out === 1; // TODO: is 1 true?
+
+        // check that the total amount is preserved
+        totalInputAmount === leftAmount + rightAmount;
     }
-
-    // check that the amounts are not too large
-    let maxAmount = 2 ** 100;
-    leftAmount < maxAmount;
-    rightAmount < maxAmount;
-
-    // check that the total amount is preserved
-    totalInputAmount === leftAmount + rightAmount;
 
     // verify that the commitments are correct
     component left = Commitment();
@@ -168,16 +188,6 @@ template Split(height, notes) {
     right.amount <== rightAmount;
     right.salt <== rightSalt;
     right.commitment === rightCommitment;
-
-    // check that the nullifier will be unique
-    // XXX: this isn't strictly necessary, just a sanity check
-    // TODO: remove once things are working
-    // XXX: this will actually break burning a full note
-    left.nullifier !== right.nullifier;
-    for (var i = 0; i < notes; i++) {
-        left.nullifier !== nullifiers[i];
-        right.nullifier !== nullifiers[i];
-    }
 }
 
 component main {
