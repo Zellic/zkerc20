@@ -20,7 +20,7 @@ clean:
 	rm -f circuit.r1cs circuit.sym circuit_final.zkey verification_key.json verifier.sol
 
 
-powersOfTau*.ptau:
+%.ptau:
 	wget https://storage.googleapis.com/zkevm/ptau/$@
 
 
