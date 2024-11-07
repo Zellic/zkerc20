@@ -119,8 +119,6 @@ template Split(MAX_HEIGHT, NUM_NOTES) {
 
     signal merkleValid[NUM_NOTES];
 
-    
-
     var totalInputAmount = 0;
 
     // off-chain, nullifiers are checked to be unique
@@ -133,6 +131,8 @@ template Split(MAX_HEIGHT, NUM_NOTES) {
         commitments[i].nullifier === nullifiers[i];
 
         // check that the commitment is not from the burn salt (0)
+        // NOTE: technically a 0 salt should never be inserted in the 
+        //   in-contract state. This is just a sanity check.
         saltCheck[i] = IsZero();
         saltCheck[i].in <== commitments[i].salt;
         saltCheck[i].out === 0; // 0 is false
@@ -151,6 +151,7 @@ template Split(MAX_HEIGHT, NUM_NOTES) {
         merkleValid[i] * amounts[i] === 0;
 
         // constrain the amount to be 128 bit
+        // NOTE: technically this is not necessary. Just another sanity check.
         overflowCheck[i] = LessThan(128);
         overflowCheck[i].in[0] <== amounts[i];
         overflowCheck[i].in[1] <== 2 ** 128;
@@ -164,6 +165,7 @@ template Split(MAX_HEIGHT, NUM_NOTES) {
     leftAmountCheck.in[0] <== leftAmount;
     leftAmountCheck.in[1] <== 2 ** 128;
     leftAmountCheck.out === 1;
+
     component rightAmountCheck = LessThan(128);
     rightAmountCheck.in[0] <== rightAmount;
     rightAmountCheck.in[1] <== 2 ** 128;
