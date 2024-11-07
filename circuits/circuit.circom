@@ -112,13 +112,14 @@ template Split(MAX_HEIGHT, NUM_NOTES) {
     signal input sides[NUM_NOTES][MAX_HEIGHT];
 
     component saltCheck[NUM_NOTES];
-    signal overflowCheck[NUM_NOTES];
+    component overflowCheck[NUM_NOTES];
 
     component commitments[NUM_NOTES];
     component verifiers[NUM_NOTES];
 
     signal merkleValid[NUM_NOTES];
 
+    
 
     var totalInputAmount = 0;
 
@@ -149,20 +150,24 @@ template Split(MAX_HEIGHT, NUM_NOTES) {
         merkleValid[i] <== verifiers[i].root - root;
         merkleValid[i] * amounts[i] === 0;
 
-        // overflow check (TODO: is this the best way?)
-        overflowCheck[i] <== amounts[i] < (2 ** 256 - totalInputAmount - 1);
-        overflowCheck[i] === 1;
+        // constrain the amount to be 128 bit
+        overflowCheck[i] = LessThan(128);
+        overflowCheck[i].in[0] <== amounts[i];
+        overflowCheck[i].in[1] <== 2 ** 128;
+        overflowCheck[i].out === 1;
 
         totalInputAmount += amounts[i];
     }
 
-    // check that the amounts are not too large
-    // TODO: is there a better way to do this
-    var maxAmount = 2 ** 256 / 2 - 1;
-    signal leftTotalAmountCheck <== maxAmount - leftAmount >= 1;
-    leftTotalAmountCheck === 1;
-    signal rightTotalAmountCheck <== maxAmount - rightAmount >= 1;
-    rightTotalAmountCheck === 1;
+    // constrain leftAmount and rightAmount to be 128 bit
+    component leftAmountCheck = LessThan(128);
+    leftAmountCheck.in[0] <== leftAmount;
+    leftAmountCheck.in[1] <== 2 ** 128;
+    leftAmountCheck.out === 1;
+    component rightAmountCheck = LessThan(128);
+    rightAmountCheck.in[0] <== rightAmount;
+    rightAmountCheck.in[1] <== 2 ** 128;
+    rightAmountCheck.out === 1;
 
     // check that the total amount is preserved
     totalInputAmount === leftAmount + rightAmount;
