@@ -74,7 +74,7 @@ template Commitment() {
     signal output nullifier;
     signal output commitment;
 
-    component nullifierHasher = Poseidon(4);
+    component nullifierHasher = Poseidon(3);
     nullifierHasher.inputs[0] <== asset;
     nullifierHasher.inputs[1] <== amount;
     nullifierHasher.inputs[2] <== salt;
@@ -111,6 +111,9 @@ template Split(MAX_HEIGHT, NUM_NOTES) {
     signal input path[NUM_NOTES][MAX_HEIGHT];
     signal input sides[NUM_NOTES][MAX_HEIGHT];
 
+    component saltCheck[NUM_NOTES];
+    signal overflowCheck[NUM_NOTES];
+
     component commitments[NUM_NOTES];
     component verifiers[NUM_NOTES];
 
@@ -128,11 +131,10 @@ template Split(MAX_HEIGHT, NUM_NOTES) {
         commitments[i].salt <== salts[i];
         commitments[i].nullifier === nullifiers[i];
 
-        // check that the commitment is not from the burn salt
-        component saltCheck = GreaterThan(256);
-        saltCheck.in[0] <== commitments[i].salt;
-        saltCheck.in[1] <== 0;
-        saltCheck.out === 1; // TODO: is 1 true?
+        // check that the commitment is not from the burn salt (0)
+        saltCheck[i] = IsZero();
+        saltCheck[i].in <== commitments[i].salt;
+        saltCheck[i].out === 0; // 0 is false
 
         // check that the commitment is in the tree
         verifiers[i] = MerkleRoot(MAX_HEIGHT);
@@ -148,10 +150,8 @@ template Split(MAX_HEIGHT, NUM_NOTES) {
         merkleValid[i] * amounts[i] === 0;
 
         // overflow check (TODO: is this the best way?)
-        component overflowCheck = LessThan(256);
-        overflowCheck.in[0] <== amounts[i];
-        overflowCheck.in[1] <== 2 ** 256 - totalInputAmount - 1;
-        overflowCheck.out === 1; // TODO: is 1 true?
+        overflowCheck[i] <== amounts[i] < (2 ** 256 - totalInputAmount - 1);
+        overflowCheck[i] === 1;
 
         totalInputAmount += amounts[i];
     }
@@ -159,15 +159,10 @@ template Split(MAX_HEIGHT, NUM_NOTES) {
     // check that the amounts are not too large
     // TODO: is there a better way to do this
     var maxAmount = 2 ** 256 / 2 - 1;
-    component leftTotalAmountCheck = LessThan(256);
-    totalAmountCheck.in[0] <== leftAmount;
-    totalAmountCheck.in[1] <== maxAmount;
-    totalAmountCheck.out === 1; // TODO: is 1 true?
-
-    component rightTotalAmountCheck = LessThan(256);
-    totalAmountCheck.in[0] <== rightAmount;
-    totalAmountCheck.in[1] <== maxAmount;
-    totalAmountCheck.out === 1; // TODO: is 1 true?
+    signal leftTotalAmountCheck <== maxAmount - leftAmount >= 1;
+    leftTotalAmountCheck === 1;
+    signal rightTotalAmountCheck <== maxAmount - rightAmount >= 1;
+    rightTotalAmountCheck === 1;
 
     // check that the total amount is preserved
     totalInputAmount === leftAmount + rightAmount;
