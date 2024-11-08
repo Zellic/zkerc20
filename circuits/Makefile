@@ -30,7 +30,7 @@ clean:
 
 
 test: verifier.sol circuit_final.zkey
-	npm run test
+	npx hardhat test
 
 
 .PHONY: clean test

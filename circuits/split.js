@@ -204,6 +204,8 @@ void (async () => {
         96,
     )
 
+    console.log('Generating proof for', inputs);
+
     console.log('generating proof...')
     const { proof, publicSignals } = await snarkjs.groth16.fullProve(
         inputs,

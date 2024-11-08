@@ -1,7 +1,7 @@
 [profile.default]
 src = "contracts"
 out = "out"
-libs = ["lib"]
+#libs = ["lib"]
 solc = "0.8.27"
 remappings = [
     "@layerzerolabs/lz-evm-protocol-v2=node_modules/@layerzerolabs/lz-evm-protocol-v2/",
