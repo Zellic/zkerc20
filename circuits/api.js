@@ -46,7 +46,7 @@ class ProofGenerationCached {
         // TODO: use a better hash function lol
         const hashCode = s => s.split('').reduce((a,b)=>{a=((a<<5)-a)+b.charCodeAt(0);return a&a},0)
 
-        const cacheKey = hashCode(JSON.stringify(data));
+        const cacheKey = hashCode(''+data);
         if (cacheKey in this.proofCache) {
             console.debug(`Cache hit for ${cacheKey}`);
             return this.proofCache[cacheKey];
@@ -227,11 +227,21 @@ class TransactionKeeper {
         }
 
         // find where the input commitments are in the tree
-        const pathAndSides = inputCommitments.map(c => merkleTree.generateProof(c.index));
+        //const pathAndSides = inputCommitments.map(c => merkleTree.generateProof(c.index));
+        // paths, and sides, should both be arrays of size inputCommitments.length. Each element is an array of ints
+        var paths = [];
+        var sides = [];
+        for (let i = 0; i < inputCommitments.length; i++) {
+            const { path, sides: s } = merkleTree.generateProof(inputCommitments[i].index);
+            //console.log('HERE:',p);
+            paths.push(path.map((p) => this.mimcSponge.F.toObject(p)))
+            sides.push(s);
+        }
+
 
         // 4. prove it!
         const proof = await this.proofGenerationCached.prove({
-            root: merkleTree.root, // must be updated before this _split call
+            root: this.mimcSponge.F.toObject(merkleTree.root), // must be updated before this _split call
             asset: leftCommitment.asset,
             tokenId: leftCommitment.tokenId,
             amounts: inputCommitments.map(c => c.amount),
@@ -239,18 +249,18 @@ class TransactionKeeper {
 
             leftAmount: leftCommitment.amount,
             leftSalt: leftCommitment.salt,
-            leftCommitment: leftCommitment.commitmentHash(this.proofGenerationCached),
+            leftCommitment: this.mimcSponge.F.toObject(leftCommitment.commitmentHash(this.proofGenerationCached)),
 
             rightAmount: rightCommitment.amount,
             rightSalt: rightCommitment.salt,
-            rightCommitment: rightCommitment.commitmentHash(this.proofGenerationCached),
+            rightCommitment: this.mimcSponge.F.toObject(rightCommitment.commitmentHash(this.proofGenerationCached)),
 
-            nullifiers: inputCommitments.map(c => c.nullifierHash(this.proofGenerationCached)),
+            nullifiers: inputCommitments.map(c => this.mimcSponge.F.toObject(c.nullifierHash(this.proofGenerationCached))),
             
             // signal input path[NUM_NOTES][MAX_HEIGHT];
             // signal input sides[NUM_NOTES][MAX_HEIGHT];
-            path: pathAndSides.map(ps => ps.path),
-            sides: pathAndSides.map(ps => ps.sides)
+            path: paths,
+            sides
         });
 
         return proof;

@@ -120,7 +120,7 @@ const buildTransfer = async (
         nullifiers.push(mimcSponge.F.toObject(nullifier))
 
         const { path, side } = toMerkleProof(merkleRows, index)
-        paths.push(path.map((p) => mimcSponge.F.toObject(p)))
+        paths.push(path.map((p) => mimcSponge.F.toObject(Number(p))))
         sides.push(side.map((s) => s))
     }
 
