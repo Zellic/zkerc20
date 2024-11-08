@@ -114,14 +114,13 @@ contract TransactionKeeper is MerkleTree(30) {
             proof.b,
             proof.c,
             [
-                inputCommitment,
+                _hash(inputCommitment, 0), // fake merkle root
                 leftCommitment,
                 rightCommitment, // empty commitment
                 inputNullifier, 0, 0, 0, 0, 0, 0, 0 // nullifiers[8]
             ]
         );
     }
-        
 
 
     function split(
