@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0
 pragma solidity ^0.8.27;
 
 import { Node } from "../contracts/Node.sol";
@@ -22,9 +23,7 @@ contract Deploy is Ownable {
     // DO NOT CHANGE. ONLY ADD NEW BRIDGE TYPES
     uint8 public constant LZ_BRIDGE = 10;
 
-    constructor() {
-        transferOwnership(msg.sender);
-    }
+    constructor() Ownable(msg.sender) {}
 
 
     function initialize(address/* _hashContracts*/, address payable _node, address _lzBridge) public onlyOwner {

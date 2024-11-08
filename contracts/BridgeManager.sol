@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0
 pragma solidity ^0.8.27;
 
 import "./interfaces/IBridge.sol";
@@ -12,9 +13,7 @@ abstract contract BridgeManager is IBridgeManager, Ownable {
     mapping(address => uint8) public contractToBridge; // bridge contract => bridge id
 
 
-    constructor(address _deployer) Ownable() {
-        transferOwnership(_deployer);
-    }
+    constructor(address _deployer) Ownable(_deployer) {}
 
 
     function _sendMessage(

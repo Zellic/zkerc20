@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0
 pragma solidity ^0.8.27;
 
 import { TransactionKeeper, ProofCommitment } from "./TransactionKeeper.sol";
@@ -9,7 +10,7 @@ contract ZKERC20 is IZKERC20, TransactionKeeper {
 
     event Mint(address indexed asset, uint256 amount);
     event Mint();
-    event Burn(address indexed asset uint256 amount);
+    event Burn(address indexed asset, uint256 amount);
     event Transfer();
 
     modifier onlyNode() {
@@ -71,7 +72,7 @@ contract ZKERC20 is IZKERC20, TransactionKeeper {
         uint256 remoteCommitment,
         uint256[8] memory nullifier,
         ProofCommitment memory proof
-    ) external override onlyNode returns (uint256, uint256) {
+    ) external override onlyNode returns (uint256) {
         emit Transfer();
         return TransactionKeeper.bridge(
             localCommitment,

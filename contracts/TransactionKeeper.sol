@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0
 pragma solidity ^0.8.27;
 
 import { MerkleTree } from "./MerkleTree.sol";
@@ -26,7 +27,7 @@ contract TransactionKeeper is MerkleTree(30) {
         uint256 index,
 
         address asset,
-        uint256 amount,
+        uint256 amount
     );
 
 
@@ -46,6 +47,8 @@ contract TransactionKeeper is MerkleTree(30) {
     }
 
 
+    // Checks the proof, nullifies the nullifiers, and returns true if the proof
+    // is valid.
     function _checkProof(
         uint256 leftCommitment,
         uint256 rightCommitment,
@@ -85,13 +88,13 @@ contract TransactionKeeper is MerkleTree(30) {
 
 
     // checks that the leftCommitment simply has the right amount and asset,
-    // without revealing the salt
-    function _checkInsertProof(
+    // without revealing the salt. Does not nullify anything.
+    function _verifyInsertProof(
         address asset,
         uint256 amount,
         uint256 leftCommitment,
         ProofCommitment memory proof
-    ) private returns (bool) {
+    ) private view returns (bool) {
         // construct a merkle trie with one input note
         (uint256 inputCommitment, uint256 inputNullifier) = _commitment(
             uint256(uint160(asset)),
@@ -212,7 +215,7 @@ contract TransactionKeeper is MerkleTree(30) {
         ProofCommitment memory proof
     ) internal returns (uint256 index) {
         require(
-            _checkInsertProof(
+            _verifyInsertProof(
                 asset,
                 amount,
                 leftCommitment,
@@ -257,7 +260,7 @@ contract TransactionKeeper is MerkleTree(30) {
         uint256 amount,
         uint256 salt
     ) public view returns (uint256) {
-        return poseidonFour.poseidon([asset, amount, salt]);
+        return poseidonFour.poseidon([asset, 0, amount, salt]);
     }
 
 
