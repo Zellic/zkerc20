@@ -24,6 +24,7 @@ describe.only("JS API tests", function () {
         await api.initialize();
 
         const hashContracts = await ethers.deployContract("HashContracts");
+        await hashContracts.initialize();
 
         node = await ethers.deployContract('Node', [owner.address, hashContracts.target]);
         zkerc20 = await node.zkerc20();
