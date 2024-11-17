@@ -40,6 +40,8 @@ contract TransactionKeeper is MerkleTree(30) {
 
 
     constructor(address _hashContracts) {
+        // XXX: have to do this silly multistep deployment because constructor 
+        // is too big if we just deploy there.
         HashContracts deployer = HashContracts(_hashContracts);
         poseidonTwo = deployer.poseidonTwo();
         poseidonFour = deployer.poseidonFour();

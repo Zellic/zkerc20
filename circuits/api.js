@@ -62,11 +62,10 @@ class ProofGenerationCached {
 }
 
 
-// { asset: address, tokenId: uint256, amount: uint256, salt: uint256 }
+// { asset: address, amount: uint256, salt: uint256 }
 class Commitment {
-    constructor(asset, tokenId, amount, salt, index = null) {
+    constructor(asset, amount, salt, index = null) {
         this.asset = asset;
-        this.tokenId = tokenId;
         this.amount = amount;
         this.salt = salt;
         this.index = index;
@@ -75,7 +74,6 @@ class Commitment {
     nullifierHash(proofGeneration) {
         return proofGeneration.poseidon([
             this.asset,
-            this.tokenId,
             this.amount,
             this.salt
         ]);
@@ -255,7 +253,7 @@ class TransactionKeeper {
         // 1. make sure inputCommitments is NUM_NOTES sized
         for (let i = inputCommitments.length; i < NUM_NOTES; i++) {
             // we can't have 0 as salt, but it doesn't matter since amount=0
-            inputCommitments.push(new Commitment(leftCommitment.asset, leftCommitment.tokenId, 0, 0x1));
+            inputCommitments.push(new Commitment(leftCommitment.asset, 0, 0x1));
         }
 
         // 2. all elements are the same asset type. None of the inputs can have 0 as salt
@@ -267,18 +265,10 @@ class TransactionKeeper {
             if (c.asset != leftCommitment.asset) {
                 throw new Error('input commitment asset mismatch', { inputCommitment: c, expectedAsset: leftCommitment.asset });
             }
-
-            if (c.tokenId != leftCommitment.tokenId) {
-                throw new Error('input commitment tokenId mismatch', { inputCommitment: c, expectedTokenId: leftCommitment.tokenId });
-            }
         });
 
         if (leftCommitment.asset != rightCommitment.asset) {
             throw new Error('right commitment asset is incorrect', { rightCommitment, expectedAsset: leftCommitment.asset });
-        }
-
-        if (leftCommitment.tokenId != rightCommitment.tokenId) {
-            throw new Error('right commitment tokenId is incorrect', { rightCommitment, expectedTokenId: leftCommitment.tokenId });
         }
 
         // 3. ensure leftCommitment.amount + rightCommitment.amount == sum(inputCommitments.amount)
@@ -323,7 +313,6 @@ class TransactionKeeper {
         const proof = await this.proofGenerationCached.prove({
             root: this.mimcSponge.F.toObject(merkleTree.root), // must be updated before this _split call
             asset: leftCommitment.asset,
-            tokenId: leftCommitment.tokenId,
             amounts: inputCommitments.map(c => c.amount),
             salts: inputCommitments.map(c => c.salt),
 
@@ -350,14 +339,14 @@ class TransactionKeeper {
     // main functions
 
     // lock
-    async insert(asset, tokenId, amount, salt) {
+    async insert(asset, amount, salt) {
         // We basically mint by faking that there's an inputCommitment to fund leftCommitment.
         // The purpose of this is to avoid revealing the salt, while being 
-        // able to verify on-chain that the asset, tokenId, and amount match.
+        // able to verify on-chain that the asset and amount match.
 
-        const inputCommitment = new Commitment(asset, tokenId, amount, 0x1); // fake commitment used to satisfy the circuits
-        const leftCommitment = new Commitment(asset, tokenId, amount, salt); // the user's actual commitment
-        const rightCommitment = new Commitment(asset, tokenId, 0, 0x0); // dummy commitment
+        const inputCommitment = new Commitment(asset, amount, 0x1); // fake commitment used to satisfy the circuits
+        const leftCommitment = new Commitment(asset, amount, salt); // the user's actual commitment
+        const rightCommitment = new Commitment(asset, 0, 0x0); // dummy commitment
 
         const fakeMerkleTree = new MerkleTree(this.mimcSponge, () => []);
 
@@ -380,7 +369,7 @@ class TransactionKeeper {
     }
 
     // unlock
-    async drop(asset, tokenId, amount, salt, inputCommitments) {
+    async drop(asset, amount, salt, inputCommitments) {
         // get total amount from input commitments
         const sumInputAmount = inputCommitments.reduce((acc, c) => acc + c.amount, 0);
         if (sumInputAmount < amount) {
@@ -388,8 +377,8 @@ class TransactionKeeper {
         }
 
         // left is burned (salt 0), right is the remainder
-        const leftCommitment = new Commitment(asset, tokenId, amount, 0x0);
-        const rightCommitment = new Commitment(asset, tokenId, sumInputAmount - amount, salt);
+        const leftCommitment = new Commitment(asset, amount, 0x0);
+        const rightCommitment = new Commitment(asset, sumInputAmount - amount, salt);
 
         rightCommitment.index = this.merkleTree.insert(rightCommitment.commitmentHash(this.proofGenerationCached));
         const proof = await this._split(this.merkleTree, inputCommitments, leftCommitment, rightCommitment);
@@ -402,9 +391,9 @@ class TransactionKeeper {
     }
 
     // bridge
-    async bridge(asset, tokenId, localAmount, localSalt, remoteAmount, remoteSalt, inputCommitments) {
-        const localCommitment = new Commitment(asset, tokenId, localAmount, localSalt);
-        const remoteCommitment = new Commitment(asset, tokenId, remoteAmount, remoteSalt);
+    async bridge(asset, localAmount, localSalt, remoteAmount, remoteSalt, inputCommitments) {
+        const localCommitment = new Commitment(asset, localAmount, localSalt);
+        const remoteCommitment = new Commitment(asset, remoteAmount, remoteSalt);
 
         localCommitment.index = this.merkleTree.insert(localCommitment.commitmentHash(this.proofGenerationCached));
         const proof = await this._split(this.merkleTree, inputCommitments, localCommitment, remoteCommitment);
@@ -418,8 +407,8 @@ class TransactionKeeper {
 
     // transferFrom
     async split(payoutAmount, payoutSalt, remainderAmount, remainderSalt, inputCommitments) {
-        const payoutCommitment = new Commitment(asset, tokenId, payoutAmount, payoutSalt);
-        const remainderCommitment = new Commitment(asset, tokenId, remainderAmount, remainderSalt);
+        const payoutCommitment = new Commitment(asset, payoutAmount, payoutSalt);
+        const remainderCommitment = new Commitment(asset, remainderAmount, remainderSalt);
 
         remainderCommitment.index = this.merkleTree.insert(remainderCommitment.commitmentHash(this.proofGenerationCached));
         const proof = await this._split(this.merkleTree, inputCommitments, payoutCommitment, remainderCommitment);
@@ -459,16 +448,15 @@ class Node {
         uint256 commitment,
         ProofCommitment memory proof
     ) external returns (uint256 receipt); */
-    async lock(asset, tokenId, amount, salt) {
+    async lock(asset, amount, salt) {
         // sanity check
         if (amount > 0 && salt == 0) {
-            throw new Error('disallowing self-griefing by using 0 salt with a non-zero amount', { asset, tokenId, amount, salt });
+            throw new Error('disallowing self-griefing by using 0 salt with a non-zero amount', { asset, amount, salt });
         }
 
-        const { commitment, proof } = await this.transactionKeeper.insert(asset, tokenId, amount, salt);
+        const { commitment, proof } = await this.transactionKeeper.insert(asset, amount, salt);
         return new NodeResult({
             asset,
-            tokenId,
             amount,
             commitment: commitment.commitmentHash(this.transactionKeeper.proofGenerationCached),
             proof
@@ -485,11 +473,10 @@ class Node {
         uint256[8] memory nullifier,
         ProofCommitment memory proof
     ) external { */
-    async unlock(asset, tokenId, amount, remainderSalt, inputCommitments) {
-        const { remainderCommitment, nullifiedCommitments, proof } = await this.transactionKeeper.drop(asset, tokenId, amount, salt, inputCommitments);
+    async unlock(asset, amount, remainderSalt, inputCommitments) {
+        const { remainderCommitment, nullifiedCommitments, proof } = await this.transactionKeeper.drop(asset, amount, salt, inputCommitments);
         return new NodeResult({
             asset,
-            tokenId,
             amount,
             remainderCommitment: remainderCommitment.commitmentHash(this.transactionKeeper.proofGenerationCached),
             nullifier: nullifiedCommitments.map(n => n.nullifierHash(this.transactionKeeper.proofGenerationCached)),
@@ -507,15 +494,15 @@ class Node {
         uint256[8] memory nullifiers,
         ProofCommitment memory proof
     ) internal returns (uint256 localIndex) { */
-    async bridge(asset, tokenId, localAmount, localSalt, remoteAmount, remoteSalt, inputCommitments) {
+    async bridge(asset, localAmount, localSalt, remoteAmount, remoteSalt, inputCommitments) {
         // sanity check
         if (localAmount > 0 && localSalt == 0) {
-            throw new Error('disallowing self-griefing by using 0 salt for local commitment with a non-zero amount', { asset, tokenId, localAmount, localSalt });
+            throw new Error('disallowing self-griefing by using 0 salt for local commitment with a non-zero amount', { asset, localAmount, localSalt });
         } else if (remoteAmount > 0 && remoteSalt == 0) {
-            throw new Error('disallowing self-griefing by using 0 salt for remote commitment with a non-zero amount', { asset, tokenId, remoteAmount, remoteSalt });
+            throw new Error('disallowing self-griefing by using 0 salt for remote commitment with a non-zero amount', { asset, remoteAmount, remoteSalt });
         }
 
-        const { localCommitment, remoteCommitment, proof } = await this.transactionKeeper.bridge(asset, tokenId, localAmount, localSalt, remoteAmount, remoteSalt, inputCommitments);
+        const { localCommitment, remoteCommitment, proof } = await this.transactionKeeper.bridge(asset, localAmount, localSalt, remoteAmount, remoteSalt, inputCommitments);
         return new NodeResult({
             localCommitment: localCommitment.commitmentHash(this.transactionKeeper.proofGenerationCached),
             remoteCommitment: remoteCommitment.commitmentHash(this.transactionKeeper.proofGenerationCached),
@@ -535,12 +522,12 @@ class Node {
         uint256[8] memory nullifier,
         ProofCommitment memory proof
     ) external returns (uint256 payoutIndex, uint256 remainderIndex) { */
-    async transferFrom(asset, tokenId, payoutAmount, payoutSalt, remainderAmount, remainderSalt, inputCommitments) {
+    async transferFrom(asset, payoutAmount, payoutSalt, remainderAmount, remainderSalt, inputCommitments) {
         // sanity check
         if (payoutAmount > 0 && payoutSalt == 0) {
-            throw new Error('disallowing self-griefing by using 0 salt for payout commitment with a non-zero amount', { asset, tokenId, payoutAmount, payoutSalt });
+            throw new Error('disallowing self-griefing by using 0 salt for payout commitment with a non-zero amount', { asset, payoutAmount, payoutSalt });
         } else if (remainderAmount > 0 && remainderSalt == 0) {
-            throw new Error('disallowing self-griefing by using 0 salt for remainder commitment with a non-zero amount', { asset, tokenId, remainderAmount, remainderSalt });
+            throw new Error('disallowing self-griefing by using 0 salt for remainder commitment with a non-zero amount', { asset, remainderAmount, remainderSalt });
         }
 
         const { payoutCommitment, remainderCommitment, proof } = await this.transactionKeeper.split(payoutAmount, payoutSalt, remainderAmount, remainderSalt, inputCommitments);

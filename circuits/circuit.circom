@@ -68,18 +68,16 @@ template MerkleRoot(MAX_HEIGHT) {
 
 template Commitment() {
     signal input asset;
-    signal input tokenId;
     signal input amount;
     signal input salt;
 
     signal output nullifier;
     signal output commitment;
 
-    component nullifierHasher = Poseidon(4);
+    component nullifierHasher = Poseidon(3);
     nullifierHasher.inputs[0] <== asset;
-    nullifierHasher.inputs[1] <== tokenId;
-    nullifierHasher.inputs[2] <== amount;
-    nullifierHasher.inputs[3] <== salt;
+    nullifierHasher.inputs[1] <== amount;
+    nullifierHasher.inputs[2] <== salt;
     nullifier <== nullifierHasher.out;
 
     component commitmentHasher = Poseidon(2);
@@ -93,7 +91,6 @@ template Split(MAX_HEIGHT, NUM_NOTES) {
     // NUM_NOTES in
     signal input root;
     signal input asset; // private
-    signal input tokenId; // private
     signal input amounts[NUM_NOTES]; // private
     signal input salts[NUM_NOTES]; // private
 
@@ -107,7 +104,7 @@ template Split(MAX_HEIGHT, NUM_NOTES) {
     signal input rightSalt; // private
     signal input rightCommitment;
 
-    // should be hash(asset, tokenId, amount, salt)
+    // should be hash(asset, amount, salt)
     signal input nullifiers[NUM_NOTES];
 
     // leaf of the tree is hash(nullifier, salt)
@@ -129,7 +126,6 @@ template Split(MAX_HEIGHT, NUM_NOTES) {
         // check that the nullifier is correct
         commitments[i] = Commitment();
         commitments[i].asset <== asset;
-        commitments[i].tokenId <== tokenId;
         commitments[i].amount <== amounts[i];
         commitments[i].salt <== salts[i];
         commitments[i].nullifier === nullifiers[i];
@@ -181,14 +177,12 @@ template Split(MAX_HEIGHT, NUM_NOTES) {
     // verify that the commitments are correct
     component left = Commitment();
     left.asset <== asset;
-    left.tokenId <== tokenId;
     left.amount <== leftAmount;
     left.salt <== leftSalt;
     left.commitment === leftCommitment;
 
     component right = Commitment();
     right.asset <== asset;
-    right.tokenId <== tokenId;
     right.amount <== rightAmount;
     right.salt <== rightSalt;
     right.commitment === rightCommitment;
