@@ -1,8 +1,14 @@
 CIRCUITS := circuits
 CONTRACTS := contracts
 
-clean:
-	$(MAKE) -C $(CIRCUITS)/Makefile clean
+.DEFAULT_GOAL := test
 
 test:
-	$(MAKE) -C $(CIRCUITS)/Makefile test
+	$(MAKE) -C $(CIRCUITS) test
+
+clean:
+	$(MAKE) -C $(CIRCUITS) clean
+	forge clean
+	npx hardhat clean
+
+.PHONY: clean test

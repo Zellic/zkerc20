@@ -5,7 +5,7 @@ import { MerkleTree } from "./MerkleTree.sol";
 import { Groth16Verifier } from "../circuits/verifier.sol";
 import {
     IPoseidonTwo,
-    IPoseidonFour,
+    IPoseidonThree,
     IMimcSponge,
     HashContracts
 } from "./HashContracts.sol";
@@ -35,7 +35,7 @@ contract TransactionKeeper is MerkleTree(30) {
     mapping(uint256 => bool) public spent;
 
     IPoseidonTwo public poseidonTwo;
-    IPoseidonFour public poseidonFour;
+    IPoseidonThree public poseidonThree;
     IMimcSponge public mimcSponge;
 
 
@@ -44,7 +44,7 @@ contract TransactionKeeper is MerkleTree(30) {
         // is too big if we just deploy there.
         HashContracts deployer = HashContracts(_hashContracts);
         poseidonTwo = deployer.poseidonTwo();
-        poseidonFour = deployer.poseidonFour();
+        poseidonThree = deployer.poseidonThree();
         mimcSponge = deployer.mimcSponge();
     }
 
@@ -268,7 +268,7 @@ contract TransactionKeeper is MerkleTree(30) {
         uint256 amount,
         uint256 salt
     ) public view returns (uint256) {
-        return poseidonFour.poseidon([asset, 0, amount, salt]);
+        return poseidonThree.poseidon([asset, amount, salt]);
     }
 
 

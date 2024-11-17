@@ -1,7 +1,7 @@
 const fs = require('fs');
 const { buildPoseidon, buildMimcSponge } = require('circomlibjs');
 const { groth16 } = require('snarkjs');
-const { ethers } = require('ethers');
+
 
 
 const PROOF_CACHE_FILE = '/tmp/proof_cache.json';
@@ -31,7 +31,7 @@ class ProofGeneration {
 
 // wrap ProofGeneration but cache the proof results in a cache file to speed 
 // up rerunning the tests
-class ProofGenerationCached {
+class ProofGenerationCached { // TODO: just override ProofGeneration
     constructor(_poseidon) {
         this.proofGeneration = new ProofGeneration(_poseidon);
         this.proofCache = {};
@@ -50,10 +50,11 @@ class ProofGenerationCached {
 
         const cacheKey = hashCode(''+data);
         if (cacheKey in this.proofCache) {
-            console.debug(`Cache hit for ${cacheKey}`);
+            console.debug(`Proof cache hit for ${cacheKey}`);
             return this.proofCache[cacheKey];
         }
 
+        console.debug(`Proof cache miss for ${cacheKey}, generating new proof...`);
         const proofData = await this.proofGeneration.prove(data);
         this.proofCache[cacheKey] = proofData;
         fs.writeFileSync(PROOF_CACHE_FILE, JSON.stringify(this.proofCache));
@@ -332,7 +333,11 @@ class TransactionKeeper {
             sides
         });
 
-        return proof;
+        return {
+            a: proof.proof.pi_a.slice(0, 2).map(ethers.toBigInt),
+            b: proof.proof.pi_b.slice(0, 2).map((x) => x.map(ethers.toBigInt)),
+            c: proof.proof.pi_c.slice(0, 2).map(ethers.toBigInt)
+        }
     }
 
 
@@ -458,7 +463,7 @@ class Node {
         return new NodeResult({
             asset,
             amount,
-            commitment: commitment.commitmentHash(this.transactionKeeper.proofGenerationCached),
+            commitment: ethers.toBigInt(commitment.commitmentHash(this.transactionKeeper.proofGenerationCached)),
             proof
         }, {
             inserted: [commitment]
@@ -478,7 +483,7 @@ class Node {
         return new NodeResult({
             asset,
             amount,
-            remainderCommitment: remainderCommitment.commitmentHash(this.transactionKeeper.proofGenerationCached),
+            remainderCommitment: ethers.toBigInt(remainderCommitment.commitmentHash(this.transactionKeeper.proofGenerationCached)),
             nullifier: nullifiedCommitments.map(n => n.nullifierHash(this.transactionKeeper.proofGenerationCached)),
             proof
         }, {
@@ -504,8 +509,8 @@ class Node {
 
         const { localCommitment, remoteCommitment, proof } = await this.transactionKeeper.bridge(asset, localAmount, localSalt, remoteAmount, remoteSalt, inputCommitments);
         return new NodeResult({
-            localCommitment: localCommitment.commitmentHash(this.transactionKeeper.proofGenerationCached),
-            remoteCommitment: remoteCommitment.commitmentHash(this.transactionKeeper.proofGenerationCached),
+            localCommitment: ethers.toBigInt(localCommitment.commitmentHash(this.transactionKeeper.proofGenerationCached)),
+            remoteCommitment: ethers.toBigInt(remoteCommitment.commitmentHash(this.transactionKeeper.proofGenerationCached)),
             nullifiers: inputCommitments.map(n => n.nullifierHash(this.transactionKeeper.proofGenerationCached)),
             proof
         }, {
@@ -546,8 +551,10 @@ class Node {
 
 // this class will be the one that actually connects onchain
 class ConnectedNode extends Node {
-    constructor() {
+    constructor(ethers) {
         super();
+
+        this.ethers = ethers;
     }
 }
 
