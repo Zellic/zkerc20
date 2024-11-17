@@ -94,13 +94,21 @@ class MerkleTree {
         this.root = 0;
         this.index = 0;
         this.filledSubtrees = Array(MAX_HEIGHT).fill(0); // array to store intermediate hashes at each tree level
+        this.values = {};
+    }
+
+    getValue(index) {
+        if (index in this.values) {
+            return this.values[index];
+        }
+        return 0;
     }
 
     // inserts a value into the tree and updates the root
     // TODO: test
     insert(value) {
         if (this.index >= 2 ** MAX_HEIGHT) {
-            throw new Error("merkle tree is full");
+            throw new Error("Tree is full");
         }
 
         let current = value;
@@ -113,10 +121,11 @@ class MerkleTree {
             } else {
                 current = this._merkleHash(this.filledSubtrees[i], current);
             }
-            index = Math.floor(index / 2);
+            index >>= 1; // Right shift by 1 (equivalent to index = Math.floor(index / 2))
         }
 
         this.root = current; // update root to the latest
+        this.values[this.index] = value; // store the value at the current index
         return this.index++; // return the position of the inserted transaction, then increment index
     }
 
@@ -137,23 +146,40 @@ class MerkleTree {
     }
 
     // generates a proof (path and sides) for a given index
-    // TODO: need to double check this!!!
-    generateProof(index) {
-        const path = [];
-        const sides = [];
-        let currentIndex = index;
+    generateProof(index) { // index is the LEAF INDEX
+        // we need to walk up the tree and get the sibling at each level
+        let path = [];
+        let sides = [];
 
-        for (let i = 0; i < MAX_HEIGHT; i++) {
-            const siblingIndex = currentIndex % 2 === 0 ? currentIndex + 1 : currentIndex - 1;
-            const sibling = this.filledSubtrees[i] || 0;  // Use 0 if no sibling hash exists
+        const getSibling = (index, i) => {
+            // at level 30, it's just the opposite of the current index
+            
+            if (i == 0) {
+                return index % 2 == 0 ? this.getValue(index + 1) : this.getValue(index - 1);
+            }
 
-            path.push(sibling);
-            sides.push(currentIndex % 2); // 0 if left, 1 if right
+            // but at level 29, we have to walk down the tree to get the sibling
+            // so here's a general solution:
+            //           X
+            //       a          b
+            //   A       B          C
+            // 0   1   2   3      4   5
+            //
+            // index = 3, i = 2, dat=a
+            // siblingIndex = 2
+            // parent = merkleHash(val(2), val(3))
+            //
+            // index = 3, i = 2
+            // siblingIndex = 3 ^ (1 << 2) = 7
+            //
 
-            currentIndex = Math.floor(currentIndex / 2);
+            let siblingIndex = index ^ (1 << i); // flip the i-th bit
+            return this._merkleHash(this.getValue(siblingIndex), this.getValue(siblingIndex % 2 == 0 ? siblingIndex + 1 : siblingIndex - 1));
         }
-
-        return { path, sides };
+        for (let i = 0; i < MAX_HEIGHT; i++) {
+            path.push(getSibling(index, i));
+            sides.push(index % 2);
+        }
     }
 }
 
