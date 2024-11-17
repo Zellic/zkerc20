@@ -1,7 +1,7 @@
 const { expect } = require("chai");
 const { ethers } = require("hardhat");
 
-const { Node } = require("../../circuits/api");
+const { Node, ConnectedNode } = require("../../circuits/api");
 
 describe.only("JS API tests", function () {
     let node;
@@ -10,8 +10,7 @@ describe.only("JS API tests", function () {
     let assetA = 0xdeadbeef;
 
     before(async function () {
-        console.log(Node);
-        node = new Node();
+        node = new ConnectedNode();
         await node.initialize();
     });
 

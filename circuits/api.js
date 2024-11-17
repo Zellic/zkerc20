@@ -7,8 +7,10 @@ const { ethers } = require('ethers');
 const PROOF_CACHE_FILE = '/tmp/proof_cache.json';
 
 const CIRCUIT_WASM = 'circuits/circuit_js/circuit.wasm';
-const CIRCUIT_ZKEY = 'circuits/circuit_js/circuit_final.zkey';
+const CIRCUIT_ZKEY = 'circuits/circuit_final.zkey';
 
+const MAX_HEIGHT = 30;
+const NUM_NOTES = 8;
 
 class ProofGeneration {
     constructor(_poseidon) {
@@ -88,18 +90,48 @@ class Commitment {
 }
 
 
+// XXX: unfortunately this is going to have to be regenerated each transaction.
+// Otherwise, it won't be updating as people submit (if the user stays on the 
+// page)
 class MerkleTree {
-    constructor(transactionKeeper) {
-        this._merkleHash = (left, right) => transactionKeeper._merkleHash(left, right);
+    constructor(mimcSponge, getLatestLeaves) {
+        this._getLatestLeaves = getLatestLeaves;
+        this._mimcSponge = mimcSponge;
+        this._mimcZero = mimcSponge.F.fromObject(0);
+
+        // start with empty tree. Will be filled by _fetchLatestLeaves at the 
+        // end of this constructor.
         this.root = 0;
         this.index = 0;
         this.filledSubtrees = Array(MAX_HEIGHT).fill(0); // array to store intermediate hashes at each tree level
-        this.values = {};
+        this.leaves = []
+
+        // need to initialize
+        if (getLatestLeaves) {
+            this._fetchLatestLeaves();
+        }
+    }
+    
+    // updates the merkle tree state
+    _fetchLatestLeaves() {
+        //this.leaves = this._getLatestLeaves();
+        //this.index = this.leaves.length;
+        // filledSubtrees wil update on next insert
+        
+        // XXX: not the most efficient thing, but this is just for MVP
+        const leaves = this._getLatestLeaves();
+        for (var i = 0; i < leaves.length; i++) {
+            this.insert(leaves[i]);
+        }
+    }
+
+    _merkleHash(left, right) {
+        return this._mimcSponge.multiHash([left, right], 0, 1);
     }
 
     getValue(index) {
-        if (index in this.values) {
-            return this.values[index];
+        if (index < this.leaves.length) {
+            return this.leaves[index];
         }
         return 0;
     }
@@ -125,7 +157,7 @@ class MerkleTree {
         }
 
         this.root = current; // update root to the latest
-        this.values[this.index] = value; // store the value at the current index
+        this.leaves.push(value); // store the value at the current index
         return this.index++; // return the position of the inserted transaction, then increment index
     }
 
@@ -145,55 +177,78 @@ class MerkleTree {
         return current === treeRoot;
     }
 
-    // generates a proof (path and sides) for a given index
-    generateProof(index) { // index is the LEAF INDEX
-        // we need to walk up the tree and get the sibling at each level
-        let path = [];
-        let sides = [];
+    // recalcs each time (we're assuming we're gonna insert after generating 
+    // proof)
+    _getRows() {
+        const layers = [this.leaves]
 
-        const getSibling = (index, i) => {
-            // at level 30, it's just the opposite of the current index
-            
-            if (i == 0) {
-                return index % 2 == 0 ? this.getValue(index + 1) : this.getValue(index - 1);
+        while (layers.length < MAX_HEIGHT + 1) {
+            const last = layers[layers.length - 1]
+            if (last.length % 2 === 1) {
+                last.push(this._mimcZero)
             }
 
-            // but at level 29, we have to walk down the tree to get the sibling
-            // so here's a general solution:
-            //           X
-            //       a          b
-            //   A       B          C
-            // 0   1   2   3      4   5
-            //
-            // index = 3, i = 2, dat=a
-            // siblingIndex = 2
-            // parent = merkleHash(val(2), val(3))
-            //
-            // index = 3, i = 2
-            // siblingIndex = 3 ^ (1 << 2) = 7
-            //
+            const next = []
+            for (let i = 0; i < last.length / 2; i++) {
+                const left = last[i * 2]
+                const right = last[i * 2 + 1]
+                next.push(this._merkleHash(left, right))
+            }
 
-            let siblingIndex = index ^ (1 << i); // flip the i-th bit
-            return this._merkleHash(this.getValue(siblingIndex), this.getValue(siblingIndex % 2 == 0 ? siblingIndex + 1 : siblingIndex - 1));
+            layers.push(next)
         }
+
+        return layers
+    }
+
+    // generates a proof (path and sides) for a given index
+    generateProof(index) { // index is the LEAF INDEX
+        const rows = this._getRows();
+        const path = [];
+        const sides = [];
+
         for (let i = 0; i < MAX_HEIGHT; i++) {
-            path.push(getSibling(index, i));
-            sides.push(index % 2);
+            const layer = rows[i]
+            const siblingIndex = index % 2 === 0 ? index + 1 : index - 1
+            const sibling = layer[siblingIndex]
+            path.push(sibling)
+
+            // TODO: double check this logic. Seems sus
+            if (index < siblingIndex) {
+                sides.push(0)
+            } else {
+                sides.push(1)
+            }
+
+            index = Math.floor(index / 2)
+        }
+
+        // sanity check
+        // TODO: remove;
+        this.verifyProof(this.root, this.getValue(index), index, path);
+
+        return {
+            path,
+            sides
         }
     }
 }
 
 
-const MAX_HEIGHT = 30;
-const NUM_NOTES = 8;
 class TransactionKeeper {
-    constructor(poseidon, mimcSponge) {
+    /*
+     * NOTE: If a commitment is inserted, it's kept in the state / a usable 
+     * commitment, unless it's immediately (atomically) nullified on-chain.
+     *
+     * Fake input commitment: nullified atomically on-chain
+     * Fake output commitment: never actually inserted into the tree
+     */
+
+
+    constructor(poseidon, mimcSponge, getLatestLeaves) {
         this.proofGenerationCached = new ProofGenerationCached(poseidon);
         this.mimcSponge = mimcSponge;
-    }
-
-    _merkleHash(left, right) {
-        return this.mimcSponge.multiHash([left, right], 0, 1);
+        this.merkleTree = new MerkleTree(mimcSponge, getLatestLeaves);
     }
 
     async _split(merkleTree, inputCommitments, leftCommitment, rightCommitment) {
@@ -259,7 +314,6 @@ class TransactionKeeper {
         var sides = [];
         for (let i = 0; i < inputCommitments.length; i++) {
             const { path, sides: s } = merkleTree.generateProof(inputCommitments[i].index);
-            //console.log('HERE:',p);
             paths.push(path.map((p) => this.mimcSponge.F.toObject(p)))
             sides.push(s);
         }
@@ -297,22 +351,36 @@ class TransactionKeeper {
 
     // lock
     async insert(asset, tokenId, amount, salt) {
-        const inputCommitment = new Commitment(asset, tokenId, amount, 0x1);
-        const leftCommitment = new Commitment(asset, tokenId, amount, salt);
-        const rightCommitment = new Commitment(asset, tokenId, 0, 0x0);
+        // We basically mint by faking that there's an inputCommitment to fund leftCommitment.
+        // The purpose of this is to avoid revealing the salt, while being 
+        // able to verify on-chain that the asset, tokenId, and amount match.
 
-        var merkleTree = new MerkleTree(this);
-        inputCommitment.index = merkleTree.insert(inputCommitment.commitmentHash(this.proofGenerationCached));
-        const proof = await this._split(merkleTree, [inputCommitment], leftCommitment, rightCommitment);
+        const inputCommitment = new Commitment(asset, tokenId, amount, 0x1); // fake commitment used to satisfy the circuits
+        const leftCommitment = new Commitment(asset, tokenId, amount, salt); // the user's actual commitment
+        const rightCommitment = new Commitment(asset, tokenId, 0, 0x0); // dummy commitment
+
+        const fakeMerkleTree = new MerkleTree(this.mimcSponge, () => []);
+
+        // we have to insert the fake inputCommitment to satisfy circuits
+        // NOTE: on-chain, this is implemented in TransactionKeeper._verifyInsertProof
+
+        inputCommitment.index = fakeMerkleTree.insert(inputCommitment.commitmentHash(this.proofGenerationCached));
+        leftCommitment.index = fakeMerkleTree.insert(leftCommitment.commitmentHash(this.proofGenerationCached));
+        const proof = await this._split(fakeMerkleTree, [inputCommitment], leftCommitment, rightCommitment);
+
+        // we also need to update local state, so just insert it 
+        // TODO/XXX: why do we need to keep local state if we're gona have to 
+        // refetch every time anyway? I guess for tests
+        leftCommitment.index = this.merkleTree.insert(leftCommitment.commitmentHash(this.proofGenerationCached));
 
         return {
-            commitment,
+            commitment: leftCommitment,
             proof
         };
     }
 
     // unlock
-    async drop(merkleTree, asset, tokenId, amount, salt, inputCommitments) {
+    async drop(asset, tokenId, amount, salt, inputCommitments) {
         // get total amount from input commitments
         const sumInputAmount = inputCommitments.reduce((acc, c) => acc + c.amount, 0);
         if (sumInputAmount < amount) {
@@ -323,8 +391,8 @@ class TransactionKeeper {
         const leftCommitment = new Commitment(asset, tokenId, amount, 0x0);
         const rightCommitment = new Commitment(asset, tokenId, sumInputAmount - amount, salt);
 
-        rightCommitment.index = merkleTree.insert(rightCommitment.commitmentHash(this.proofGenerationCached));
-        const proof = await this._split(merkleTree, inputCommitments, leftCommitment, rightCommitment);
+        rightCommitment.index = this.merkleTree.insert(rightCommitment.commitmentHash(this.proofGenerationCached));
+        const proof = await this._split(this.merkleTree, inputCommitments, leftCommitment, rightCommitment);
 
         return {
             remainderCommitment: rightCommitment,
@@ -334,12 +402,12 @@ class TransactionKeeper {
     }
 
     // bridge
-    async bridge(merkleTree, asset, tokenId, localAmount, localSalt, remoteAmount, remoteSalt, inputCommitments) {
+    async bridge(asset, tokenId, localAmount, localSalt, remoteAmount, remoteSalt, inputCommitments) {
         const localCommitment = new Commitment(asset, tokenId, localAmount, localSalt);
         const remoteCommitment = new Commitment(asset, tokenId, remoteAmount, remoteSalt);
 
-        localCommitment.index = merkleTree.insert(localCommitment.commitmentHash(this.proofGenerationCached));
-        const proof = await this._split(merkleTree, inputCommitments, localCommitment, remoteCommitment);
+        localCommitment.index = this.merkleTree.insert(localCommitment.commitmentHash(this.proofGenerationCached));
+        const proof = await this._split(this.merkleTree, inputCommitments, localCommitment, remoteCommitment);
 
         return {
             localCommitment,
@@ -349,12 +417,12 @@ class TransactionKeeper {
     }
 
     // transferFrom
-    async split(merkleTree, payoutAmount, payoutSalt, remainderAmount, remainderSalt, inputCommitments) {
+    async split(payoutAmount, payoutSalt, remainderAmount, remainderSalt, inputCommitments) {
         const payoutCommitment = new Commitment(asset, tokenId, payoutAmount, payoutSalt);
         const remainderCommitment = new Commitment(asset, tokenId, remainderAmount, remainderSalt);
 
-        remainderCommitment.index = merkleTree.insert(remainderCommitment.commitmentHash(this.proofGenerationCached));
-        const proof = await this._split(merkleTree, inputCommitments, payoutCommitment, remainderCommitment);
+        remainderCommitment.index = this.merkleTree.insert(remainderCommitment.commitmentHash(this.proofGenerationCached));
+        const proof = await this._split(this.merkleTree, inputCommitments, payoutCommitment, remainderCommitment);
 
         return {
             payoutCommitment,
@@ -376,11 +444,12 @@ class NodeResult {
 
 class Node {
     constructor() {}
+
     // XXX: I'm bad at JS. Not sure how to do async in constructors
-    async initialize() {
+    async initialize(getLatestLeaves) {
         const poseidon = await buildPoseidon();
         const mimcSponge = await buildMimcSponge();
-        this.transactionKeeper = new TransactionKeeper(poseidon, mimcSponge);
+        this.transactionKeeper = new TransactionKeeper(poseidon, mimcSponge, getLatestLeaves);
     }
     
     // create an insert commitment with fake root containing just the commitment
@@ -397,8 +466,9 @@ class Node {
         }
 
         const { commitment, proof } = await this.transactionKeeper.insert(asset, tokenId, amount, salt);
-        return NodeResult({
-            token,
+        return new NodeResult({
+            asset,
+            tokenId,
             amount,
             commitment: commitment.commitmentHash(this.transactionKeeper.proofGenerationCached),
             proof
@@ -415,10 +485,11 @@ class Node {
         uint256[8] memory nullifier,
         ProofCommitment memory proof
     ) external { */
-    async unlock(merkleTree, asset, tokenId, amount, remainderSalt, inputCommitments) {
-        const { remainderCommitment, nullifiedCommitments, proof } = await this.transactionKeeper.drop(merkleTree, asset, tokenId, amount, salt, inputCommitments);
-        return NodeResult({
-            token,
+    async unlock(asset, tokenId, amount, remainderSalt, inputCommitments) {
+        const { remainderCommitment, nullifiedCommitments, proof } = await this.transactionKeeper.drop(asset, tokenId, amount, salt, inputCommitments);
+        return new NodeResult({
+            asset,
+            tokenId,
             amount,
             remainderCommitment: remainderCommitment.commitmentHash(this.transactionKeeper.proofGenerationCached),
             nullifier: nullifiedCommitments.map(n => n.nullifierHash(this.transactionKeeper.proofGenerationCached)),
@@ -436,7 +507,7 @@ class Node {
         uint256[8] memory nullifiers,
         ProofCommitment memory proof
     ) internal returns (uint256 localIndex) { */
-    async bridge(merkleTree, asset, tokenId, localAmount, localSalt, remoteAmount, remoteSalt, inputCommitments) {
+    async bridge(asset, tokenId, localAmount, localSalt, remoteAmount, remoteSalt, inputCommitments) {
         // sanity check
         if (localAmount > 0 && localSalt == 0) {
             throw new Error('disallowing self-griefing by using 0 salt for local commitment with a non-zero amount', { asset, tokenId, localAmount, localSalt });
@@ -444,8 +515,8 @@ class Node {
             throw new Error('disallowing self-griefing by using 0 salt for remote commitment with a non-zero amount', { asset, tokenId, remoteAmount, remoteSalt });
         }
 
-        const { localCommitment, remoteCommitment, proof } = await this.transactionKeeper.bridge(merkleTree, asset, tokenId, localAmount, localSalt, remoteAmount, remoteSalt, inputCommitments);
-        return NodeResult({
+        const { localCommitment, remoteCommitment, proof } = await this.transactionKeeper.bridge(asset, tokenId, localAmount, localSalt, remoteAmount, remoteSalt, inputCommitments);
+        return new NodeResult({
             localCommitment: localCommitment.commitmentHash(this.transactionKeeper.proofGenerationCached),
             remoteCommitment: remoteCommitment.commitmentHash(this.transactionKeeper.proofGenerationCached),
             nullifiers: inputCommitments.map(n => n.nullifierHash(this.transactionKeeper.proofGenerationCached)),
@@ -464,7 +535,7 @@ class Node {
         uint256[8] memory nullifier,
         ProofCommitment memory proof
     ) external returns (uint256 payoutIndex, uint256 remainderIndex) { */
-    async transferFrom(merkleTree, asset, tokenId, payoutAmount, payoutSalt, remainderAmount, remainderSalt, inputCommitments) {
+    async transferFrom(asset, tokenId, payoutAmount, payoutSalt, remainderAmount, remainderSalt, inputCommitments) {
         // sanity check
         if (payoutAmount > 0 && payoutSalt == 0) {
             throw new Error('disallowing self-griefing by using 0 salt for payout commitment with a non-zero amount', { asset, tokenId, payoutAmount, payoutSalt });
@@ -472,8 +543,8 @@ class Node {
             throw new Error('disallowing self-griefing by using 0 salt for remainder commitment with a non-zero amount', { asset, tokenId, remainderAmount, remainderSalt });
         }
 
-        const { payoutCommitment, remainderCommitment, proof } = await this.transactionKeeper.split(merkleTree, payoutAmount, payoutSalt, remainderAmount, remainderSalt, inputCommitments);
-        return NodeResult({
+        const { payoutCommitment, remainderCommitment, proof } = await this.transactionKeeper.split(payoutAmount, payoutSalt, remainderAmount, remainderSalt, inputCommitments);
+        return new NodeResult({
             payoutCommitment: payoutCommitment.commitmentHash(this.transactionKeeper.proofGenerationCached),
             remainderCommitment: remainderCommitment.commitmentHash(this.transactionKeeper.proofGenerationCached),
             nullifiers: inputCommitments.map(n => n.nullifierHash(this.transactionKeeper.proofGenerationCached)),
@@ -485,6 +556,15 @@ class Node {
     }
 }
 
+
+// this class will be the one that actually connects onchain
+class ConnectedNode extends Node {
+    constructor() {
+        super();
+    }
+}
+
 module.exports = {
-    Node
+    Node,
+    ConnectedNode
 };

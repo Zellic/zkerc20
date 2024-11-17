@@ -109,12 +109,18 @@ contract TransactionKeeper is MerkleTree(30) {
             0 // salt (0 is the burn salt)
         );
 
+        // construct a fake merkle tree proof leaves=[inputCommitment, rightCommitment]
+        uint256 fakeMerkleRoot = _hash(inputCommitment, rightCommitment);
+        for (uint256 i = 0; i < 30 - 1; i++) { // XXX: magic number 30. TODO have a constant
+            fakeMerkleRoot = _hash(fakeMerkleRoot, 0);
+        }
+
         return verifier.verifyProof(
             proof.a,
             proof.b,
             proof.c,
             [
-                _hash(inputCommitment, 0), // fake merkle root
+                fakeMerkleRoot, // fake merkle root
                 leftCommitment,
                 rightCommitment, // empty commitment
                 inputNullifier, 0, 0, 0, 0, 0, 0, 0 // nullifiers[8]
@@ -214,6 +220,7 @@ contract TransactionKeeper is MerkleTree(30) {
         ProofCommitment memory proof
     ) internal returns (uint256 index) {
         require(
+            // deals with the fake insertion
             _verifyInsertProof(
                 asset,
                 amount,
