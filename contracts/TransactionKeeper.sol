@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity ^0.8.27;
 
+import { console } from "hardhat/console.sol";
+
 import { MerkleTree } from "./MerkleTree.sol";
 import { Groth16Verifier } from "../circuits/verifier.sol";
 import {
@@ -103,6 +105,13 @@ contract TransactionKeeper is MerkleTree(30) {
             amount,
             0x1 // salt. Can't have burn salt (0) here, but it doesn't matter what it is
         );
+        
+        // empty commitments to fill the array
+        (uint256 inputZeroCommitment, uint256 inputZeroNullifier) = _commitment(
+            uint256(uint160(asset)),
+            0,
+            0x1 // salt. Can't have burn salt (0) here, but it doesn't matter what it is
+        );
 
         // rightCommitment is just a hardcoded 0 salt, 0 amount commitment
         (uint256 rightCommitment,) = _commitment(
@@ -117,6 +126,14 @@ contract TransactionKeeper is MerkleTree(30) {
             fakeMerkleRoot = _hash(fakeMerkleRoot, 0);
         }
 
+        console.log("==== _verifyInsertProof ====");
+        console.log("fakeMerkleRoot: %d", fakeMerkleRoot);
+        console.log("leftCommitment: %d", leftCommitment);
+        console.log("rightCommitment: %d", rightCommitment);
+        console.log("nullifiers[0]: %d", inputNullifier);
+        console.log("nullifiers[1..7]: %d", inputZeroNullifier);
+        console.log("============================");
+
         return verifier.verifyProof(
             proof.a,
             proof.b,
@@ -125,7 +142,16 @@ contract TransactionKeeper is MerkleTree(30) {
                 fakeMerkleRoot, // fake merkle root
                 leftCommitment,
                 rightCommitment, // empty commitment
-                inputNullifier, 0, 0, 0, 0, 0, 0, 0 // nullifiers[8]
+
+                // nullifiers[8]
+                inputNullifier,
+                inputZeroNullifier,
+                inputZeroNullifier,
+                inputZeroNullifier,
+                inputZeroNullifier,
+                inputZeroNullifier,
+                inputZeroNullifier,
+                inputZeroNullifier
             ]
         );
     }
@@ -268,6 +294,10 @@ contract TransactionKeeper is MerkleTree(30) {
         uint256 amount,
         uint256 salt
     ) public view returns (uint256) {
+        console.log("EXAMPLE FROM SOL: %d", poseidonThree.poseidon([uint256(0), uint256(0), uint256(0)]));
+        console.log("- sol poseidon3 asset: %d", asset);
+        console.log("-               amount: %d", amount);
+        console.log("-               salt: %d", salt);
         return poseidonThree.poseidon([asset, amount, salt]);
     }
 

@@ -65,6 +65,8 @@ class ProofGenerationCached { // TODO: just override ProofGeneration
 
 // { asset: address, amount: uint256, salt: uint256 }
 class Commitment {
+    _zeroPadConvertUint8Array(x) { return ethers.getBytes(ethers.zeroPadValue(ethers.getBytes(ethers.toBeArray(x)), 32)); } // XXX
+
     constructor(asset, amount, salt, index = null) {
         this.asset = asset;
         this.amount = amount;
@@ -73,10 +75,20 @@ class Commitment {
     }
 
     nullifierHash(proofGeneration) {
+
+        console.log("EXAMPLE FROM JS", ethers.toBigInt(proofGeneration.poseidon([0, 0, 0])));
+
+        let asset = this._zeroPadConvertUint8Array(this.asset);
+        let amount = this._zeroPadConvertUint8Array(this.amount);
+        let salt = this._zeroPadConvertUint8Array(this.salt);
+
+        /*console.log("- js poseidon3 asset:", asset);
+        console.log("-              amount:", amount);
+        console.log("-              salt:", salt);*/
         return proofGeneration.poseidon([
-            this.asset,
-            this.amount,
-            this.salt
+            asset,
+            amount,
+            salt
         ]);
     }
 
@@ -308,6 +320,15 @@ class TransactionKeeper {
             paths.push(path.map((p) => this.mimcSponge.F.toObject(p)))
             sides.push(s);
         }
+
+
+        console.debug('---- API split ----');
+        console.debug('root:', ethers.toBigInt(merkleTree.root));
+        console.debug('leftCommitment:', ethers.toBigInt(leftCommitment.commitmentHash(this.proofGenerationCached)));
+        console.debug('rightCommitment:', ethers.toBigInt(rightCommitment.commitmentHash(this.proofGenerationCached)));
+        for (var i = 0; i < inputCommitments.length; i++)
+            console.debug('nullifiers['+i+']:', ethers.toBigInt(inputCommitments[i].nullifierHash(this.proofGenerationCached)));
+        console.debug('-------------------');
 
 
         // 4. prove it!

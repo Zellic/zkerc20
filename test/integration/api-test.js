@@ -37,8 +37,7 @@ describe.only("JS API tests", function () {
         let nonce = 1234;
 
         const result = await api.lock(token.target, amount, nonce);
-        console.log('Result:', result);
-        console.log('proof:', result.args.proof)
+        //console.log('Result:', result);
 
         await token.mint(owner.address, amount);
         expect(await token.balanceOf(owner.address)).to.equal(amount);
