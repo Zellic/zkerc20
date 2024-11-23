@@ -30,7 +30,7 @@ clean:
 
 
 test: verifier.sol circuit_final.zkey
-	npx hardhat test
+	RUST_BACKTRACE=full npx hardhat test
 
 
 .PHONY: clean test

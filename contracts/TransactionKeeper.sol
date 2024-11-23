@@ -117,12 +117,13 @@ contract TransactionKeeper is MerkleTree(30) {
         );
 
         // construct a fake merkle tree proof leaves=[inputCommitment, rightCommitment]
-        uint256 fakeMerkleRoot = _hash(inputCommitment, rightCommitment);
+        uint256 fakeMerkleRoot = _hash(inputCommitment, leftCommitment);
         for (uint256 i = 0; i < 30 - 1; i++) { // XXX: magic number 30. TODO have a constant
             fakeMerkleRoot = _hash(fakeMerkleRoot, 0);
         }
 
         console.log("==== _verifyInsertProof ====");
+        console.log("sanity: %d", _hash(1337, 1234));
         console.log("fakeMerkleRoot: %d", fakeMerkleRoot);
         console.log("leftCommitment: %d", leftCommitment);
         console.log("rightCommitment: %d", rightCommitment);

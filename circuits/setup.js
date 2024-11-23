@@ -49,8 +49,7 @@ class Setup {
 
         let mimcSpongeFactory = new ethers.ContractFactory(
             mimcSpongecontract.abi,
-            // TODO confirm seeds
-            mimcSpongecontract.createCode(ethers.toUtf8Bytes(2), 220, { keccak256: ethers.keccak256 }), // XXX/TODO: temporarily bypass bug in circomlibjs
+            mimcSpongecontract.createCode(ethers.toUtf8Bytes("mimcsponge"), 220, { keccak256: ethers.keccak256 }), // XXX/TODO: temporarily bypass bug in circomlibjs
             this.owner
         );
         this.mimcSponge = await mimcSpongeFactory.deploy();

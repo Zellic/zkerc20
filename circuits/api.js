@@ -142,7 +142,8 @@ class MerkleTree {
         this._getLatestLeaves = getLatestLeaves;
         this._mimcSponge = mimcSponge;
         //this._mimcZero = mimcSponge.F.fromObject(0);
-        this._mimcZero = mimcSponge.F.zero;
+        //this._mimcZero = mimcSponge.F.zero;
+        this._mimcZero = 0; // TODO is this bad?
 
         // start with empty tree. Will be filled by _fetchLatestLeaves at the 
         // end of this constructor.
@@ -357,6 +358,7 @@ class TransactionKeeper {
 
 
         console.debug('---- API split ----');
+        console.debug('sanity:', ethers.toBigInt(merkleTree._merkleHash(1337, 1234)));
         console.debug('root:', ethers.toBigInt(merkleTree.root));
         console.debug('leftCommitment:', ethers.toBigInt(leftCommitment.commitmentHash(this.proofGenerationCached)));
         console.debug('rightCommitment:', ethers.toBigInt(rightCommitment.commitmentHash(this.proofGenerationCached)));
@@ -407,7 +409,6 @@ class TransactionKeeper {
         const inputCommitment = new Commitment(asset, amount, 0x1); // fake commitment used to satisfy the circuits
         const leftCommitment = new Commitment(asset, amount, salt); // the user's actual commitment
         const rightCommitment = new Commitment(asset, 0, 0x0); // dummy commitment
-        console.log('JS INSERT rightCommitment', rightCommitment)
 
         const fakeMerkleTree = new MerkleTree(this.mimcSponge, () => []);
 
