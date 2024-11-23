@@ -102,7 +102,7 @@ contract TransactionKeeper is MerkleTree(30) {
             0x1 // salt. Can't have burn salt (0) here, but it doesn't matter what it is
         );
         
-        // empty commitments to fill the array
+        // empty commitments, only used to fill the array
         (uint256 inputZeroCommitment, uint256 inputZeroNullifier) = _commitment(
             uint256(uint160(asset)),
             0,
@@ -290,10 +290,10 @@ contract TransactionKeeper is MerkleTree(30) {
         uint256 amount,
         uint256 salt
     ) public view returns (uint256) {
-        console.log("EXAMPLE FROM SOL: %d", poseidonTwo.poseidon([uint256(0), uint256(0)]));
+        /*console.log("EXAMPLE FROM SOL: %d", poseidonTwo.poseidon([uint256(0), uint256(0)]));
         console.log("- sol poseidon3 asset: %d", asset);
         console.log("-               amount: %d", amount);
-        console.log("-               salt: %d", salt);
+        console.log("-               salt: %d", salt);*/
         return poseidonThree.poseidon([asset, amount, salt]);
     }
 

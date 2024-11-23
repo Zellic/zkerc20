@@ -1,6 +1,27 @@
 const fs = require('fs');
-const { buildPoseidon, buildMimcSponge } = require('circomlibjs');
 const { groth16 } = require('snarkjs');
+
+//const { buildPoseidon, buildMimcSponge } = require('circomlibjs');
+const {
+    poseidon_gencontract,
+    mimcsponge_gencontract,
+    poseidon,
+    mimcsponge
+} = require('../../zkerc20-deptest/node_modules/circomlibjs');
+let poseidonContract = poseidon_gencontract;
+let mimcSpongecontract = mimcsponge_gencontract;
+// async function that just returns an object with a .poseidon() function
+let buildPoseidon = async (nRounds) => {
+    return poseidon;
+}
+let buildMimcSponge = async (nRounds, seed) => {
+    return mimcsponge;
+}
+const Scalar = require("ffjavascript").Scalar
+const ZqField = require("ffjavascript").ZqField;
+const F = new ZqField(Scalar.fromString("21888242871839275222246405745257275088548364400416034343698204186575808495617"));
+mimcsponge.F = F;
+
 
 
 
@@ -91,18 +112,17 @@ class Commitment {
 
         //console.log("EXAMPLE FROM JS", ethers.toBigInt(proofGeneration.poseidon([0, 0])));
 
-        let asset = this._zeroPadConvertUint8Array(this.asset);
+        /*let asset = this._zeroPadConvertUint8Array(this.asset);
         let amount = this._zeroPadConvertUint8Array(this.amount);
-        let salt = this._zeroPadConvertUint8Array(this.salt);
+        let salt = this._zeroPadConvertUint8Array(this.salt);*/
 
-        /*console.log("- js poseidon3 asset:", asset);
-        console.log("-              amount:", amount);
-        console.log("-              salt:", salt);*/
-        return proofGeneration.poseidon([
-            asset,
-            amount,
-            salt
+        let result = proofGeneration.poseidon([
+            this.asset,
+            this.amount,
+            this.salt
         ]);
+        //console.log('nullifier hash result', result, [this.asset, this.amount, this.salt])
+        return result;
     }
 
     commitmentHash(proofGeneration) {
@@ -121,7 +141,8 @@ class MerkleTree {
     constructor(mimcSponge, getLatestLeaves) {
         this._getLatestLeaves = getLatestLeaves;
         this._mimcSponge = mimcSponge;
-        this._mimcZero = mimcSponge.F.fromObject(0);
+        //this._mimcZero = mimcSponge.F.fromObject(0);
+        this._mimcZero = mimcSponge.F.zero;
 
         // start with empty tree. Will be filled by _fetchLatestLeaves at the 
         // end of this constructor.
@@ -386,6 +407,7 @@ class TransactionKeeper {
         const inputCommitment = new Commitment(asset, amount, 0x1); // fake commitment used to satisfy the circuits
         const leftCommitment = new Commitment(asset, amount, salt); // the user's actual commitment
         const rightCommitment = new Commitment(asset, 0, 0x0); // dummy commitment
+        console.log('JS INSERT rightCommitment', rightCommitment)
 
         const fakeMerkleTree = new MerkleTree(this.mimcSponge, () => []);
 
@@ -595,5 +617,7 @@ class ConnectedNode extends Node {
 
 module.exports = {
     Node,
-    ConnectedNode
+    ConnectedNode,
+
+    Commitment
 };

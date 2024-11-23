@@ -1,7 +1,7 @@
 const { expect } = require("chai");
 //const { ethers } = require("hardhat");
 
-const { Node, ConnectedNode } = require("../../circuits/api");
+const { Node, ConnectedNode, Commitment } = require("../../circuits/api");
 const { Setup } = require("../../circuits/setup");
 
 // https://github.com/iden3/circomlibjs/blob/main/test/poseidoncontract.js
@@ -34,6 +34,23 @@ describe.only("JS API tests", function () {
         zkerc20 = setup.zkerc20;
 
         token = await ethers.deployContract('MockERC20');
+    });
+
+    it("hashing comparison tests", async function() {
+        let check = async function(amount, nonce) {
+            let commitment = new Commitment(token.target, amount, nonce);
+            let offchainNullifierHash = await ethers.toBigInt(commitment.nullifierHash(api.transactionKeeper.proofGenerationCached));
+            let offchainCommitmentHash = await ethers.toBigInt(commitment.commitmentHash(api.transactionKeeper.proofGenerationCached));
+
+            let [ onchainCommitmentHash, onchainNullifierHash ] = await node._commitment(token.target, amount, nonce);
+
+            expect(offchainNullifierHash).to.equal(onchainNullifierHash);
+            expect(offchainCommitmentHash).to.equal(onchainCommitmentHash);
+        };
+
+        await check(0, 0);
+        await check(1000, 0);
+        await check(1000, 1);
     });
 
     it("lock", async function() {

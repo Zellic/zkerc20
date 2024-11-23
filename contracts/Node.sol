@@ -4,7 +4,7 @@ pragma solidity 0.8.27;
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { BridgeManager } from "./BridgeManager.sol";
-import { ProofCommitment } from "./TransactionKeeper.sol";
+import { ProofCommitment, TransactionKeeper } from "./TransactionKeeper.sol";
 
 import { ZKERC20 } from "./ZKERC20.sol";
 import { WZKERC20 } from "./WZKERC20.sol";
@@ -18,11 +18,11 @@ contract Node is BridgeManager {
     mapping(address => address) public wrappedToNative; // the wrapped token address => the original token address
     mapping(address => bool) public isNative; // XXX: obviously, this won't be sync'd across chains and could be race con'd. Worst case scenario is you can't withdraw on that chain.
 
-    address public immutable zkerc20;
+    IZKERC20 public immutable zkerc20;
 
 
     constructor(address _deployer, address _poseidon2, address _poseidon3, address _mimcSponge) BridgeManager(_deployer) {
-        zkerc20 = address(new ZKERC20{salt: bytes32(uint256(0xdeadbeef))}(_poseidon2, _poseidon3, _mimcSponge));
+        zkerc20 = IZKERC20(new ZKERC20{salt: bytes32(uint256(0xdeadbeef))}(_poseidon2, _poseidon3, _mimcSponge));
     }
 
 
@@ -41,7 +41,7 @@ contract Node is BridgeManager {
         if (originalToken != address(0)) {
             // we're re-wrapping a token
             IWZKERC20(token).burn(msg.sender, amount);
-            receipt = IZKERC20(zkerc20)._mint(
+            receipt = zkerc20._mint(
                 originalToken,
                 amount,
                 commitment,
@@ -52,7 +52,7 @@ contract Node is BridgeManager {
             IERC20(token).safeTransferFrom(msg.sender, address(this), amount);
 
             isNative[token] = true;
-            receipt = IZKERC20(zkerc20)._mint(
+            receipt = zkerc20._mint(
                 token,
                 amount,
                 commitment,
@@ -80,7 +80,7 @@ contract Node is BridgeManager {
         uint256[8] memory nullifier,
         ProofCommitment memory proof
     ) external {
-        IZKERC20(zkerc20)._burn(
+        zkerc20._burn(
             token,
             amount,
             remainderCommitment,
@@ -110,7 +110,7 @@ contract Node is BridgeManager {
 
 
     function _receiveMessage(uint256 srcChainId, uint256 commitment) internal override {
-        IZKERC20(zkerc20)._mint(commitment);
+        zkerc20._mint(commitment);
     }
 
 
@@ -122,7 +122,7 @@ contract Node is BridgeManager {
         uint256[8] memory nullifiers,
         ProofCommitment memory proof
     ) external {
-        IZKERC20(zkerc20)._bridge(
+        zkerc20._bridge(
             localCommitment,
             remoteCommitment,
             nullifiers,
@@ -159,6 +159,25 @@ contract Node is BridgeManager {
             {salt: keccak256(abi.encodePacked(uint256(0xdeadbeef), token))}
             ()
         );
+    }
+
+
+    // TODO remove this
+    function _nullifier(
+        uint256 asset,
+        uint256 amount,
+        uint256 salt
+    ) public view returns (uint256) {
+        return TransactionKeeper(address(zkerc20))._nullifier(asset, amount, salt);
+    }
+
+
+    function _commitment(
+        uint256 asset,
+        uint256 amount,
+        uint256 salt
+    ) public view returns (uint256, uint256) {
+        return TransactionKeeper(address(zkerc20))._commitment(asset, amount, salt);
     }
 }
 
