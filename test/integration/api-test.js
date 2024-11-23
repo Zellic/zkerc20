@@ -2,6 +2,11 @@ const { expect } = require("chai");
 //const { ethers } = require("hardhat");
 
 const { Node, ConnectedNode } = require("../../circuits/api");
+const { Setup } = require("../../circuits/setup");
+
+// https://github.com/iden3/circomlibjs/blob/main/test/poseidoncontract.js
+// https://cn.bing.com/search?q=contractfactory+deploy+ethers+6.6.2&form=QBLH&sp=-1&lq=0&pq=contractfactory+deploy+ethers+6.6&sc=7-33&qs=n&sk=&cvid=400DDB4C8F184F318932B1C75CA2C4AF&ghsh=0&ghacc=0&ghpl=
+// https://docs.ethers.org/v6/single-page/
 
 describe.only("JS API tests", function () {
     let owner;
@@ -23,11 +28,10 @@ describe.only("JS API tests", function () {
         api = new ConnectedNode(ethers);
         await api.initialize();
 
-        const hashContracts = await ethers.deployContract("HashContracts");
-        await hashContracts.initialize();
-
-        node = await ethers.deployContract('Node', [owner.address, hashContracts.target]);
-        zkerc20 = await node.zkerc20();
+        let setup = new Setup(owner);
+        await setup.initialize();
+        node = setup.node;
+        zkerc20 = setup.zkerc20;
 
         token = await ethers.deployContract('MockERC20');
     });
@@ -37,7 +41,7 @@ describe.only("JS API tests", function () {
         let nonce = 1234;
 
         const result = await api.lock(token.target, amount, nonce);
-        //console.log('Result:', result);
+        console.log('Result:', result);
 
         await token.mint(owner.address, amount);
         expect(await token.balanceOf(owner.address)).to.equal(amount);

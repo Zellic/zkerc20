@@ -21,8 +21,8 @@ contract Node is BridgeManager {
     address public immutable zkerc20;
 
 
-    constructor(address _deployer, address _hashContracts) BridgeManager(_deployer) {
-        zkerc20 = address(new ZKERC20{salt: bytes32(uint256(0xdeadbeef))}(_hashContracts));
+    constructor(address _deployer, address _poseidon2, address _poseidon3, address _mimcSponge) BridgeManager(_deployer) {
+        zkerc20 = address(new ZKERC20{salt: bytes32(uint256(0xdeadbeef))}(_poseidon2, _poseidon3, _mimcSponge));
     }
 
 

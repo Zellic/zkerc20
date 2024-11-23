@@ -6,11 +6,24 @@ const { groth16 } = require('snarkjs');
 
 const PROOF_CACHE_FILE = '/tmp/proof_cache.json';
 
-const CIRCUIT_WASM = 'circuits/circuit_js/circuit.wasm';
-const CIRCUIT_ZKEY = 'circuits/circuit_final.zkey';
+const CIRCUIT_WASM = '../circuits/circuit_js/circuit.wasm';
+const CIRCUIT_ZKEY = '../circuits/circuit_final.zkey';
 
 const MAX_HEIGHT = 30;
 const NUM_NOTES = 8;
+
+
+class Setup {
+    constructor(owner) { // address
+        this.owner = owner;
+    }
+
+    async initialize() {
+        this.node = await ethers.deployContract('Node', [owner, hashContracts.target]);
+        this.zkerc20 = await node.zkerc20();
+    }
+}
+
 
 class ProofGeneration {
     constructor(_poseidon) {
@@ -76,7 +89,7 @@ class Commitment {
 
     nullifierHash(proofGeneration) {
 
-        console.log("EXAMPLE FROM JS", ethers.toBigInt(proofGeneration.poseidon([0, 0, 0])));
+        //console.log("EXAMPLE FROM JS", ethers.toBigInt(proofGeneration.poseidon([0, 0])));
 
         let asset = this._zeroPadConvertUint8Array(this.asset);
         let amount = this._zeroPadConvertUint8Array(this.amount);
@@ -578,6 +591,7 @@ class ConnectedNode extends Node {
         this.ethers = ethers;
     }
 }
+
 
 module.exports = {
     Node,

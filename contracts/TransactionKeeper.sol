@@ -8,8 +8,7 @@ import { Groth16Verifier } from "../circuits/verifier.sol";
 import {
     IPoseidonTwo,
     IPoseidonThree,
-    IMimcSponge,
-    HashContracts
+    IMimcSponge
 } from "./HashContracts.sol";
 
 struct ProofCommitment {
@@ -41,13 +40,10 @@ contract TransactionKeeper is MerkleTree(30) {
     IMimcSponge public mimcSponge;
 
 
-    constructor(address _hashContracts) {
-        // XXX: have to do this silly multistep deployment because constructor 
-        // is too big if we just deploy there.
-        HashContracts deployer = HashContracts(_hashContracts);
-        poseidonTwo = deployer.poseidonTwo();
-        poseidonThree = deployer.poseidonThree();
-        mimcSponge = deployer.mimcSponge();
+    constructor(address _poseidon2, address _poseidon3, address _mimcSponge) {
+        poseidonTwo = IPoseidonTwo(_poseidon2);
+        poseidonThree = IPoseidonThree(_poseidon3);
+        mimcSponge = IMimcSponge(_mimcSponge);
     }
 
 
@@ -294,7 +290,7 @@ contract TransactionKeeper is MerkleTree(30) {
         uint256 amount,
         uint256 salt
     ) public view returns (uint256) {
-        console.log("EXAMPLE FROM SOL: %d", poseidonThree.poseidon([uint256(0), uint256(0), uint256(0)]));
+        console.log("EXAMPLE FROM SOL: %d", poseidonTwo.poseidon([uint256(0), uint256(0)]));
         console.log("- sol poseidon3 asset: %d", asset);
         console.log("-               amount: %d", amount);
         console.log("-               salt: %d", salt);
