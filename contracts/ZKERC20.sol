@@ -119,10 +119,10 @@ contract ZKERC20 is IZKERC20, TransactionKeeper {
     function totalSupply() public pure returns (uint256) {
         revert("ZKERC20: totalSupply not supported");
     }
-    function balanceOf(address account) public pure returns (uint256) {
+    function balanceOf(address /*account*/) public pure returns (uint256) {
         revert("ZKERC20: balanceOf not supported");
     }
-    function allowance(address owner, address spender) public pure returns (uint256) {
+    function allowance(address /*owner*/, address /*spender*/) public pure returns (uint256) {
         revert("ZKERC20: allowance not supported");
     }
 }

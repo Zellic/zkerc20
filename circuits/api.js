@@ -358,7 +358,6 @@ class TransactionKeeper {
 
 
         console.debug('---- API split ----');
-        console.debug('sanity:', ethers.toBigInt(merkleTree._merkleHash(1337, 1234)));
         console.debug('root:', ethers.toBigInt(merkleTree.root));
         console.debug('leftCommitment:', ethers.toBigInt(leftCommitment.commitmentHash(this.proofGenerationCached)));
         console.debug('rightCommitment:', ethers.toBigInt(rightCommitment.commitmentHash(this.proofGenerationCached)));

@@ -103,7 +103,7 @@ contract TransactionKeeper is MerkleTree(30) {
         );
         
         // empty commitments, only used to fill the array
-        (uint256 inputZeroCommitment, uint256 inputZeroNullifier) = _commitment(
+        (/*uint256 inputZeroCommitment*/, uint256 inputZeroNullifier) = _commitment(
             uint256(uint160(asset)),
             0,
             0x1 // salt. Can't have burn salt (0) here, but it doesn't matter what it is
@@ -123,7 +123,6 @@ contract TransactionKeeper is MerkleTree(30) {
         }
 
         console.log("==== _verifyInsertProof ====");
-        console.log("sanity: %d", _hash(1337, 1234));
         console.log("fakeMerkleRoot: %d", fakeMerkleRoot);
         console.log("leftCommitment: %d", leftCommitment);
         console.log("rightCommitment: %d", rightCommitment);

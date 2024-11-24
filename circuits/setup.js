@@ -73,6 +73,7 @@ class Setup {
             throw new Error('Poseidon3 test failed', {onchainP3Result, offchainP3Result});
         }
 
+        // TODO: test mimcsponge
 
         // deploy zkerc20 contracts
 

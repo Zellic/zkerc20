@@ -36,7 +36,8 @@ describe.only("JS API tests", function () {
         token = await ethers.deployContract('MockERC20');
     });
 
-    it("hashing comparison tests", async function() {
+
+    it("hash contracts - comparison tests", async function() {
         let check = async function(amount, nonce) {
             let commitment = new Commitment(token.target, amount, nonce);
             let offchainNullifierHash = await ethers.toBigInt(commitment.nullifierHash(api.transactionKeeper.proofGenerationCached));
@@ -53,7 +54,26 @@ describe.only("JS API tests", function () {
         await check(1000, 1);
     });
 
-    it("lock", async function() {
+
+    it("hash contracts - offchain constant tests", async function() {
+        let check = async function(target, amount, nonce, expectedNullifierHash, expectedCommitmentHash) {
+            let commitment = new Commitment(target, amount, nonce);
+            let nullifierHash = await ethers.toBigInt(commitment.nullifierHash(api.transactionKeeper.proofGenerationCached));
+            let commitmentHash = await ethers.toBigInt(commitment.commitmentHash(api.transactionKeeper.proofGenerationCached));
+
+            expect(nullifierHash).to.equal(ethers.toBigInt(expectedNullifierHash));
+            expect(commitmentHash).to.equal(ethers.toBigInt(expectedCommitmentHash));
+        };
+        
+        // if these fail, the poseidon hash function is broken somehow
+        await check('0xdeadbeef', 0, 0, '19224068435258351729157069503843718869252568236362754246412158339818749573452', '19035903073545343248811008532844467234831299900385283947624316800171833185292');
+    });
+
+
+    //////////
+
+
+    it("integration - lock", async function() {
         let amount = 100000;
         let nonce = 1234;
 
@@ -64,8 +84,11 @@ describe.only("JS API tests", function () {
         expect(await token.balanceOf(owner.address)).to.equal(amount);
 
         await token.approve(node.target, amount);
+        console.log('locking')
         await node.lock(token.target, amount, result.args.commitment, result.args.proof);
+        console.log('finished. checking balance')
         expect(await token.balanceOf(owner.address)).to.equal(0);
+        console.log('done')
 
         //expect(await someContract.someFunc()).to.equal(something);
     });

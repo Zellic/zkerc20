@@ -109,7 +109,7 @@ contract Node is BridgeManager {
     // BRIDGING
 
 
-    function _receiveMessage(uint256 srcChainId, uint256 commitment) internal override {
+    function _receiveMessage(uint256 /*srcChainId*/, uint256 commitment) internal override {
         zkerc20._mint(commitment);
     }
 

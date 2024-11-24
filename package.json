@@ -2,6 +2,7 @@
   "dependencies": {
     "@layerzerolabs/lz-evm-oapp-v2": "^2.3.42",
     "@layerzerolabs/lz-evm-v1-0.7": "^2.3.42",
+    "@nomicfoundation/edr": "^0.6.5",
     "@nomicfoundation/hardhat-foundry": "^1.1.2",
     "@nomicfoundation/hardhat-toolbox": "^5.0.0",
     "@nomiclabs/hardhat-ethers": "^2.2.3",
