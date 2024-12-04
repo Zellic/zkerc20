@@ -56,7 +56,7 @@ class ProofGeneration {
     }
 
     async prove(data) {
-        console.log('Generating proof for', data);
+        //console.log('Generating proof for', data);
         const { proof, publicSignals } = await groth16.fullProve(data, CIRCUIT_WASM, CIRCUIT_ZKEY);
         //console.log(await groth16.exportSolidityCallData(proof, publicSignals))
         return { proof, publicSignals };
@@ -86,7 +86,7 @@ class ProofGenerationCached { // TODO: just override ProofGeneration
         const cacheKey = hashCode(''+data);
         if (cacheKey in this.proofCache) {
             console.debug(`Proof cache hit for ${cacheKey}`);
-            return this.proofCache[cacheKey];
+            //return this.proofCache[cacheKey]; // XXX/TODO: for some reason, proofs that have entered verifyProof can't be reused. Absolutely no idea why not
         }
 
         console.debug(`Proof cache miss for ${cacheKey}, generating new proof...`);
@@ -184,7 +184,6 @@ class MerkleTree {
     }
 
     // inserts a value into the tree and updates the root
-    // TODO: test
     insert(value) {
         if (this.index >= 2 ** MAX_HEIGHT) {
             throw new Error("Tree is full");
@@ -298,11 +297,26 @@ class TransactionKeeper {
         this.merkleTree = new MerkleTree(mimcSponge, getLatestLeaves);
     }
 
-    async _split(merkleTree, inputCommitments, leftCommitment, rightCommitment) {
+    // get secure random uint256
+    _getRandom() {
+        return Math.floor(Math.random() * 2**256); // TODO/XXX
+    }
+
+
+    async _split(_merkleTree, inputCommitments, leftCommitment, rightCommitment, randFunc) {
+        // XXX: a bit of a hack, but we need to allow using 0 as salt for 
+        // inserts which have a fake merkle root. Onchain needs to calc the 
+        // commitments too, so we can't have random salts for those. Privacy 
+        // leak doesn't matter here because the asset is obviously already 
+        // known because the ERC20 must be sent in.
+        if (randFunc === undefined) {
+            randFunc = this._getRandom;
+        }
+
         // 1. make sure inputCommitments is NUM_NOTES sized
         for (let i = inputCommitments.length; i < NUM_NOTES; i++) {
             // we can't have 0 as salt, but it doesn't matter since amount=0
-            inputCommitments.push(new Commitment(leftCommitment.asset, 0, 0x1));
+            inputCommitments.push(new Commitment(leftCommitment.asset, 0, randFunc()));
         }
 
         // 2. all elements are the same asset type. None of the inputs can have 0 as salt
@@ -352,24 +366,24 @@ class TransactionKeeper {
         var paths = [];
         var sides = [];
         for (let i = 0; i < inputCommitments.length; i++) {
-            const { path, sides: s } = merkleTree.generateProof(inputCommitments[i].index);
+            const { path, sides: s } = _merkleTree.generateProof(inputCommitments[i].index);
             paths.push(path.map((p) => this.mimcSponge.F.toObject(p)))
             sides.push(s);
         }
 
 
-        /*console.debug('---- API split ----');
-        console.debug('root:', ethers.toBigInt(merkleTree.root));
+        console.debug('---- API split ----');
+        console.debug('root:', ethers.toBigInt(_merkleTree.root));
         console.debug('leftCommitment:', ethers.toBigInt(leftCommitment.commitmentHash(this.proofGenerationCached)));
         console.debug('rightCommitment:', ethers.toBigInt(rightCommitment.commitmentHash(this.proofGenerationCached)));
         for (var i = 0; i < inputCommitments.length; i++)
             console.debug('nullifiers['+i+']:', ethers.toBigInt(inputCommitments[i].nullifierHash(this.proofGenerationCached)));
-        console.debug('-------------------');*/
+        console.debug('-------------------');
 
 
         // 4. prove it!
         const proof = await this.proofGenerationCached.prove({
-            root: this.mimcSponge.F.toObject(merkleTree.root), // must be updated before this _split call
+            root: this.mimcSponge.F.toObject(_merkleTree.root),
             asset: leftCommitment.asset,
             amounts: inputCommitments.map(c => c.amount),
             salts: inputCommitments.map(c => c.salt),
@@ -390,11 +404,12 @@ class TransactionKeeper {
             sides
         });
 
-        return {
+        const proofData = {
             a: proof.proof.pi_a.slice(0, 2).map(ethers.toBigInt),
             b: proof.proof.pi_b.slice(0, 2).map((x) => x.map(ethers.toBigInt).reverse()),
             c: proof.proof.pi_c.slice(0, 2).map(ethers.toBigInt)
         }
+        return proofData;
     }
 
 
@@ -417,7 +432,13 @@ class TransactionKeeper {
 
         inputCommitment.index = fakeMerkleTree.insert(inputCommitment.commitmentHash(this.proofGenerationCached));
         leftCommitment.index = fakeMerkleTree.insert(leftCommitment.commitmentHash(this.proofGenerationCached));
-        const proof = await this._split(fakeMerkleTree, [inputCommitment], leftCommitment, rightCommitment);
+        const proof = await this._split(
+            fakeMerkleTree,
+            [inputCommitment],
+            leftCommitment,
+            rightCommitment,
+            () => 1 // rand func, always return 1
+        );
 
         // we also need to update local state, so just insert it 
         // TODO/XXX: why do we need to keep local state if we're gona have to 
@@ -431,19 +452,34 @@ class TransactionKeeper {
     }
 
     // unlock
-    async drop(asset, amount, salt, inputCommitments) {
+    async drop(asset, amount, remainderSalt, inputCommitments) {
         // get total amount from input commitments
-        const sumInputAmount = inputCommitments.reduce((acc, c) => acc + c.amount, 0);
+        const sumInputAmount = inputCommitments.reduce((acc, c) => {
+            // RangeError: The number NaN cannot be converted to a BigInt because it is not an integer
+            if (c.amount === undefined) {
+                throw new Error('input commitment amount is undefined', { inputCommitments, c });
+            }
+            return acc + c.amount
+        }, 0);
         if (sumInputAmount < amount) {
             throw new Error('input commitments amount is less than amount to drop', { amount, sumInputAmount, inputCommitments });
         }
 
         // left is burned (salt 0), right is the remainder
-        const leftCommitment = new Commitment(asset, amount, 0x0);
-        const rightCommitment = new Commitment(asset, sumInputAmount - amount, salt);
+        const leftCommitment = new Commitment(
+            asset,
+            amount,
+            0x0 // burn salt
+        );
+        const rightCommitment = new Commitment(
+            asset,
+            sumInputAmount - amount,
+            remainderSalt
+        );
+
+        const proof = await this._split(this.merkleTree, inputCommitments, leftCommitment, rightCommitment);
 
         rightCommitment.index = this.merkleTree.insert(rightCommitment.commitmentHash(this.proofGenerationCached));
-        const proof = await this._split(this.merkleTree, inputCommitments, leftCommitment, rightCommitment);
 
         return {
             remainderCommitment: rightCommitment,
@@ -457,8 +493,9 @@ class TransactionKeeper {
         const localCommitment = new Commitment(asset, localAmount, localSalt);
         const remoteCommitment = new Commitment(asset, remoteAmount, remoteSalt);
 
-        localCommitment.index = this.merkleTree.insert(localCommitment.commitmentHash(this.proofGenerationCached));
         const proof = await this._split(this.merkleTree, inputCommitments, localCommitment, remoteCommitment);
+        
+        localCommitment.index = this.merkleTree.insert(localCommitment.commitmentHash(this.proofGenerationCached));
 
         return {
             localCommitment,
@@ -472,8 +509,9 @@ class TransactionKeeper {
         const payoutCommitment = new Commitment(asset, payoutAmount, payoutSalt);
         const remainderCommitment = new Commitment(asset, remainderAmount, remainderSalt);
 
-        remainderCommitment.index = this.merkleTree.insert(remainderCommitment.commitmentHash(this.proofGenerationCached));
         const proof = await this._split(this.merkleTree, inputCommitments, payoutCommitment, remainderCommitment);
+
+        remainderCommitment.index = this.merkleTree.insert(remainderCommitment.commitmentHash(this.proofGenerationCached));
 
         return {
             payoutCommitment,
@@ -486,9 +524,12 @@ class TransactionKeeper {
 
 // { args: dict, storage?: dict }
 class NodeResult {
-    constructor(args, storage = {}) {
+    constructor(args, storage) {
         this.args = args;
         this.storage = storage;
+        if (!this.storage) {
+            this.storage = {};
+        }
     }
 }
 
@@ -536,7 +577,7 @@ class Node {
         ProofCommitment memory proof
     ) external { */
     async unlock(asset, amount, remainderSalt, inputCommitments) {
-        const { remainderCommitment, nullifiedCommitments, proof } = await this.transactionKeeper.drop(asset, amount, salt, inputCommitments);
+        const { remainderCommitment, nullifiedCommitments, proof } = await this.transactionKeeper.drop(asset, amount, remainderSalt, inputCommitments);
         return new NodeResult({
             asset,
             amount,
@@ -544,7 +585,7 @@ class Node {
             nullifier: nullifiedCommitments.map(n => n.nullifierHash(this.transactionKeeper.proofGenerationCached)),
             proof
         }, {
-            inserted: [commitment],
+            inserted: [remainderCommitment],
             nullified: nullifiedCommitments
         });
     }
@@ -616,9 +657,15 @@ class ConnectedNode extends Node {
     }
 
     async lock(asset, amount, salt) {
-        const { args, ops } = await super.lock(asset, amount, salt);
-        args.receipt = await this.nodeContract.lock(args.asset, args.amount, args.commitment, args.proof);
-        return new NodeResult(args, ops);
+        const result = await super.lock(asset, amount, salt);
+        result.args.receipt = await this.nodeContract.lock(result.args.asset, result.args.amount, result.args.commitment, result.args.proof);
+        return result;
+    }
+
+    async unlock(asset, amount, remainderSalt, inputCommitments) {
+        const result = await super.unlock(asset, amount, remainderSalt, inputCommitments);
+        await this.nodeContract.unlock(result.args.asset, result.args.amount, result.args.remainderCommitment, result.args.nullifier, result.args.proof);
+        return result;
     }
 }
 

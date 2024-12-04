@@ -29,3 +29,8 @@ If the commitment and nullifier were identical, or anyone could easily calculate
 
 Similarly, if the nullifier were easily calculatable, then anyone could burn anyone's commitments. So we must include the salt in the nullifier as well.
 
+
+## Why do we pick random salt even for input commitments with no value?
+
+When transferring or bridging, the commitments with a zero amount always use securely random numbers. The reasoning is that if the salt and amount are known, then the asset can be deduced. To prevent privacy leaks, we must use random salts for all commitments.
+

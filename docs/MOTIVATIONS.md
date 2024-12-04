@@ -17,7 +17,7 @@ After ERC-20 tokens enter the "privacy circle," zkERC20 makes the following guar
     - Analysis of deposits and withdrawals may reveal a connection between a depositor and withdrawer (e.g., if the amounts are the same). To maintain privacy, we recommend withdrawing amounts that are not easily correlated with deposits. Consider spreading withdrawals across multiple transactions.
 - **Asset Privacy**: A zkERC20 transfer's asset is not revealed.
     - While it is possible to know that some asset is being bridged or transferred, to an outside observer, it is not possible to determine specifically which asset is being transferred or bridged.
-    - Of course, the observer will know that the asset in a transfer is within the set of assets that have been deposited, but not fully withdrawn. This is a fundamental limitation, but the risk by depositing many ERC-20 assets (including spam tokens/memecoins).
+    - Of course, the observer will know that the asset in a transfer is within the set of assets that have been deposited, but not fully withdrawn. This is a fundamental limitation, but the risk is mitigated by depositing many ERC-20 assets (including spam tokens/memecoins).
 
 These guarantees must be maintained whether transferring in the same chain, or across chains.
 

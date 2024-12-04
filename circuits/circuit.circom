@@ -19,24 +19,6 @@ template HashTwo() {
     hash <== hasher.outs[0];
 }
 
-template HashCheck() {
-    signal input left;
-    signal input right;
-    signal input hash;
-
-    component hasher = MiMCSponge(2, 220, 1);
-    hasher.ins[0] <== left;
-    hasher.ins[1] <== right;
-    hasher.k <== 0;
-
-    component again = MiMCSponge(2, 220, 1);
-    again.ins[0] <== hasher.outs[0];
-    again.ins[1] <== hasher.outs[0];
-    again.k <== 0;
-
-    again.outs[0] === hash;
-}
-
 template MerkleRoot(MAX_HEIGHT) {
     signal input value;
 

@@ -55,6 +55,28 @@ contract TransactionKeeper is MerkleTree(30) {
         uint256[8] memory nullifiers,
         ProofCommitment memory proof
     ) private returns (bool) {
+        console.log("==== onchain split ====");
+        console.log("proof.a[0]: %d", proof.a[0]);
+        console.log("proof.a[1]: %d", proof.a[1]);
+        console.log("proof.b[0][0]: %d", proof.b[0][0]);
+        console.log("proof.b[0][1]: %d", proof.b[0][1]);
+        console.log("proof.b[1][0]: %d", proof.b[1][0]);
+        console.log("proof.b[1][1]: %d", proof.b[1][1]);
+        console.log("proof.c[0]: %d", proof.c[0]);
+        console.log("proof.c[1]: %d", proof.c[1]);
+        console.log("MerkleTree.root: %d", MerkleTree.root);
+        console.log("leftCommitment: %d", leftCommitment);
+        console.log("rightCommitment: %d", rightCommitment);
+        console.log("nullifiers[0]: %d", nullifiers[0]);
+        console.log("nullifiers[1]: %d", nullifiers[1]);
+        console.log("nullifiers[2]: %d", nullifiers[2]);
+        console.log("nullifiers[3]: %d", nullifiers[3]);
+        console.log("nullifiers[4]: %d", nullifiers[4]);
+        console.log("nullifiers[5]: %d", nullifiers[5]);
+        console.log("nullifiers[6]: %d", nullifiers[6]);
+        console.log("nullifiers[7]: %d", nullifiers[7]);
+        console.log("============================");
+
         bool valid = verifier.verifyProof(
             proof.a,
             proof.b,
@@ -74,11 +96,14 @@ contract TransactionKeeper is MerkleTree(30) {
             ]
         );
 
+        console.log("got here lollll");
+        require(valid, "_checkProof: invalid proof");
         if (!valid) { return false; }
 
         // ensures nullifiers are unique (no duplicates in the array) after proof 
         // verification
         for (uint256 i = 0; i < nullifiers.length; i++) {
+            console.log("has %d been spent? %d", nullifiers[i], spent[nullifiers[i]]);
             if (spent[nullifiers[i]]) { return false; }
             spent[nullifiers[i]] = true;
         }
@@ -122,7 +147,7 @@ contract TransactionKeeper is MerkleTree(30) {
             fakeMerkleRoot = _hash(fakeMerkleRoot, 0);
         }
 
-        /*console.log("==== _verifyInsertProof ====");
+        /*console.log("==== _verifyInsertProof split ====");
         console.log("proof.a[0]: %d", proof.a[0]);
         console.log("proof.a[1]: %d", proof.a[1]);
         console.log("proof.b[0][0]: %d", proof.b[0][0]);

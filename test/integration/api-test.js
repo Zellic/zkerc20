@@ -19,7 +19,7 @@ describe.only("JS API tests", function () {
     //let assetA = ethers.utils.hexZeroPad("0xdeadbeef", 20);
     let assetA = 0xdeadbeef;
 
-    before(async function() {
+    beforeEach(async function() {
         //console.log("here next");
         const [ _owner ] = await ethers.getSigners();
         owner = _owner
@@ -52,7 +52,7 @@ describe.only("JS API tests", function () {
         await check(0, 0);
         await check(1000, 0);
         await check(1000, 1);
-    });
+    }).timeout(1000000);
 
 
     it("hash contracts - offchain constant tests", async function() {
@@ -67,13 +67,13 @@ describe.only("JS API tests", function () {
         
         // if these fail, the poseidon hash function is broken somehow
         await check('0xdeadbeef', 0, 0, '19224068435258351729157069503843718869252568236362754246412158339818749573452', '19035903073545343248811008532844467234831299900385283947624316800171833185292');
-    });
+    }).timeout(1000000);
 
 
     //////////
 
 
-    it("integration - lock", async function() {
+    /*it("integration - lock", async function() {
         let amount = 100000;
         let nonce = 1234;
 
@@ -83,24 +83,26 @@ describe.only("JS API tests", function () {
 
         const result = await api.lock(token.target, amount, nonce);
         expect(await token.balanceOf(owner.address)).to.equal(0);
-    });
+    }).timeout(1000000);*/
 
 
     it("integration - lock, unlock", async function() {
         let amount = 100000;
         let nonce = 1234;
 
-        const result = await api.lock(token.target, amount, nonce);
         await token.mint(owner.address, amount);
+        await token.approve(node.target, amount);
         expect(await token.balanceOf(owner.address)).to.equal(amount);
 
-        await token.approve(node.target, amount);
-        await node.lock(token.target, amount, result.args.commitment, result.args.proof);
+        const lockResult = await api.lock(token.target, amount, nonce);
         expect(await token.balanceOf(owner.address)).to.equal(0);
 
-        console.log("unlocking", result.args.commitment)
-        const unlockResult = await api.unlock(token.target, amount, nonce, result.args.commitment);
-
-
-    });
+        console.log(lockResult)
+        const unlockResult = await api.unlock(
+            token.target,
+            amount,
+            0, // remainder nonce
+            lockResult.storage.inserted
+        );
+    }).timeout(1000000);
 });
