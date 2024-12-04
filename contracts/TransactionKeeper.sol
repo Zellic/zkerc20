@@ -122,13 +122,21 @@ contract TransactionKeeper is MerkleTree(30) {
             fakeMerkleRoot = _hash(fakeMerkleRoot, 0);
         }
 
-        console.log("==== _verifyInsertProof ====");
+        /*console.log("==== _verifyInsertProof ====");
+        console.log("proof.a[0]: %d", proof.a[0]);
+        console.log("proof.a[1]: %d", proof.a[1]);
+        console.log("proof.b[0][0]: %d", proof.b[0][0]);
+        console.log("proof.b[0][1]: %d", proof.b[0][1]);
+        console.log("proof.b[1][0]: %d", proof.b[1][0]);
+        console.log("proof.b[1][1]: %d", proof.b[1][1]);
+        console.log("proof.c[0]: %d", proof.c[0]);
+        console.log("proof.c[1]: %d", proof.c[1]);
         console.log("fakeMerkleRoot: %d", fakeMerkleRoot);
         console.log("leftCommitment: %d", leftCommitment);
         console.log("rightCommitment: %d", rightCommitment);
         console.log("nullifiers[0]: %d", inputNullifier);
         console.log("nullifiers[1..7]: %d", inputZeroNullifier);
-        console.log("============================");
+        console.log("============================");*/
 
         return verifier.verifyProof(
             proof.a,

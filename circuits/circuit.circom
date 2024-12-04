@@ -120,7 +120,6 @@ template Split(MAX_HEIGHT, NUM_NOTES) {
     signal merkleValid[NUM_NOTES];
 
     var totalInputAmount = 0;
-
     // off-chain, nullifiers are checked to be unique
     for (var i = 0; i < NUM_NOTES; i++) {
         // check that the nullifier is correct

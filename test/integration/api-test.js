@@ -25,13 +25,13 @@ describe.only("JS API tests", function () {
         owner = _owner
         //console.log("here", owner);
 
-        api = new ConnectedNode(ethers);
-        await api.initialize();
-
         let setup = new Setup(owner);
         await setup.initialize();
         node = setup.node;
         zkerc20 = setup.zkerc20;
+
+        api = new ConnectedNode(ethers, node);
+        await api.initialize();
 
         token = await ethers.deployContract('MockERC20');
     });
@@ -77,19 +77,30 @@ describe.only("JS API tests", function () {
         let amount = 100000;
         let nonce = 1234;
 
-        const result = await api.lock(token.target, amount, nonce);
-        console.log('Result:', result);
+        await token.mint(owner.address, amount);
+        await token.approve(node.target, amount);
+        expect(await token.balanceOf(owner.address)).to.equal(amount);
 
+        const result = await api.lock(token.target, amount, nonce);
+        expect(await token.balanceOf(owner.address)).to.equal(0);
+    });
+
+
+    it("integration - lock, unlock", async function() {
+        let amount = 100000;
+        let nonce = 1234;
+
+        const result = await api.lock(token.target, amount, nonce);
         await token.mint(owner.address, amount);
         expect(await token.balanceOf(owner.address)).to.equal(amount);
 
         await token.approve(node.target, amount);
-        console.log('locking')
         await node.lock(token.target, amount, result.args.commitment, result.args.proof);
-        console.log('finished. checking balance')
         expect(await token.balanceOf(owner.address)).to.equal(0);
-        console.log('done')
 
-        //expect(await someContract.someFunc()).to.equal(something);
+        console.log("unlocking", result.args.commitment)
+        const unlockResult = await api.unlock(token.target, amount, nonce, result.args.commitment);
+
+
     });
 });

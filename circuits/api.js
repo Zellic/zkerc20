@@ -58,6 +58,7 @@ class ProofGeneration {
     async prove(data) {
         console.log('Generating proof for', data);
         const { proof, publicSignals } = await groth16.fullProve(data, CIRCUIT_WASM, CIRCUIT_ZKEY);
+        //console.log(await groth16.exportSolidityCallData(proof, publicSignals))
         return { proof, publicSignals };
     }
 }
@@ -357,13 +358,13 @@ class TransactionKeeper {
         }
 
 
-        console.debug('---- API split ----');
+        /*console.debug('---- API split ----');
         console.debug('root:', ethers.toBigInt(merkleTree.root));
         console.debug('leftCommitment:', ethers.toBigInt(leftCommitment.commitmentHash(this.proofGenerationCached)));
         console.debug('rightCommitment:', ethers.toBigInt(rightCommitment.commitmentHash(this.proofGenerationCached)));
         for (var i = 0; i < inputCommitments.length; i++)
             console.debug('nullifiers['+i+']:', ethers.toBigInt(inputCommitments[i].nullifierHash(this.proofGenerationCached)));
-        console.debug('-------------------');
+        console.debug('-------------------');*/
 
 
         // 4. prove it!
@@ -391,7 +392,7 @@ class TransactionKeeper {
 
         return {
             a: proof.proof.pi_a.slice(0, 2).map(ethers.toBigInt),
-            b: proof.proof.pi_b.slice(0, 2).map((x) => x.map(ethers.toBigInt)),
+            b: proof.proof.pi_b.slice(0, 2).map((x) => x.map(ethers.toBigInt).reverse()),
             c: proof.proof.pi_c.slice(0, 2).map(ethers.toBigInt)
         }
     }
@@ -607,10 +608,17 @@ class Node {
 
 // this class will be the one that actually connects onchain
 class ConnectedNode extends Node {
-    constructor(ethers) {
+    constructor(ethers, nodeContract) {
         super();
 
         this.ethers = ethers;
+        this.nodeContract = nodeContract;
+    }
+
+    async lock(asset, amount, salt) {
+        const { args, ops } = await super.lock(asset, amount, salt);
+        args.receipt = await this.nodeContract.lock(args.asset, args.amount, args.commitment, args.proof);
+        return new NodeResult(args, ops);
     }
 }
 
