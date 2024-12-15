@@ -21,3 +21,5 @@ package-lock.json
 
 flake.lock
 flake.nix
+
+foundry-bin/
