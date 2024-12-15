@@ -9,9 +9,9 @@ interface IPoseidonTwo {
     ) external pure returns (uint256);
 }
 
-interface IPoseidonThree {
+interface IPoseidonFour {
     function poseidon(
-        uint256[3] calldata input
+        uint256[4] calldata input
     ) external pure returns (uint256);
 }
 

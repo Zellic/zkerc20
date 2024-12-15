@@ -81,6 +81,7 @@ contract Node is BridgeManager {
         ProofCommitment memory proof
     ) external {
         zkerc20._burn(
+            msg.sender,
             token,
             amount,
             remainderCommitment,
@@ -123,6 +124,7 @@ contract Node is BridgeManager {
         ProofCommitment memory proof
     ) external {
         zkerc20._bridge(
+            msg.sender,
             localCommitment,
             remoteCommitment,
             nullifiers,
@@ -166,18 +168,20 @@ contract Node is BridgeManager {
     function _nullifier(
         uint256 asset,
         uint256 amount,
-        uint256 salt
+        uint256 salt,
+        uint256 owner
     ) public view returns (uint256) {
-        return TransactionKeeper(address(zkerc20))._nullifier(asset, amount, salt);
+        return TransactionKeeper(address(zkerc20))._nullifier(asset, amount, salt, owner);
     }
 
 
     function _commitment(
         uint256 asset,
         uint256 amount,
-        uint256 salt
+        uint256 salt,
+        uint256 owner
     ) public view returns (uint256, uint256) {
-        return TransactionKeeper(address(zkerc20))._commitment(asset, amount, salt);
+        return TransactionKeeper(address(zkerc20))._commitment(asset, amount, salt, owner);
     }
 }
 

@@ -30,7 +30,12 @@ describe.only("JS API tests", function () {
         node = setup.node;
         zkerc20 = setup.zkerc20;
 
-        api = new ConnectedNode(ethers, node, zkerc20);
+        api = new ConnectedNode(
+            ethers,
+            owner,
+            node,
+            zkerc20
+        );
         await api.initialize();
 
         token = await ethers.deployContract('MockERC20');
@@ -39,11 +44,11 @@ describe.only("JS API tests", function () {
 
     it("hash contracts - comparison tests", async function() {
         let check = async function(amount, nonce) {
-            let commitment = new Commitment(token.target, amount, nonce);
+            let commitment = new Commitment(token.target, amount, nonce, 0);
             let offchainNullifierHash = await ethers.toBigInt(commitment.nullifierHash(api.transactionKeeper.proofGenerationCached));
             let offchainCommitmentHash = await ethers.toBigInt(commitment.commitmentHash(api.transactionKeeper.proofGenerationCached));
 
-            let [ onchainCommitmentHash, onchainNullifierHash ] = await node._commitment(token.target, amount, nonce);
+            let [ onchainCommitmentHash, onchainNullifierHash ] = await node._commitment(token.target, amount, nonce, 0);
 
             expect(offchainNullifierHash).to.equal(onchainNullifierHash);
             expect(offchainCommitmentHash).to.equal(onchainCommitmentHash);
@@ -66,7 +71,7 @@ describe.only("JS API tests", function () {
         };
         
         // if these fail, the poseidon hash function is broken somehow
-        await check('0xdeadbeef', 0, 0, '19224068435258351729157069503843718869252568236362754246412158339818749573452', '19035903073545343248811008532844467234831299900385283947624316800171833185292');
+        await check('0xdeadbeef', 0, 0, '14006213014570130731724841774503597700912601142228955426330209845505752830351', '14469031835332477258829287130447066149964072663602806908366093491394045725668');
     }).timeout(1000000);
 
 

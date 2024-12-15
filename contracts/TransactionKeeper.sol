@@ -7,7 +7,7 @@ import { MerkleTree } from "./MerkleTree.sol";
 import { Groth16Verifier } from "../circuits/verifier.sol";
 import {
     IPoseidonTwo,
-    IPoseidonThree,
+    IPoseidonFour,
     IMimcSponge
 } from "./HashContracts.sol";
 
@@ -36,13 +36,13 @@ contract TransactionKeeper is MerkleTree(30) {
     mapping(uint256 => bool) public spent;
 
     IPoseidonTwo public poseidonTwo;
-    IPoseidonThree public poseidonThree;
+    IPoseidonFour public poseidonThree;
     IMimcSponge public mimcSponge;
 
 
-    constructor(address _poseidon2, address _poseidon3, address _mimcSponge) {
+    constructor(address _poseidon2, address _poseidon4, address _mimcSponge) {
         poseidonTwo = IPoseidonTwo(_poseidon2);
-        poseidonThree = IPoseidonThree(_poseidon3);
+        poseidonThree = IPoseidonFour(_poseidon4);
         mimcSponge = IMimcSponge(_mimcSponge);
     }
 
@@ -50,6 +50,7 @@ contract TransactionKeeper is MerkleTree(30) {
     // Checks the proof, nullifies the nullifiers, and returns true if the proof
     // is valid.
     function _checkProof(
+        address sender,
         uint256 leftCommitment,
         uint256 rightCommitment,
         uint256[8] memory nullifiers,
@@ -64,6 +65,7 @@ contract TransactionKeeper is MerkleTree(30) {
         console.log("proof.b[1][1]: %d", proof.b[1][1]);
         console.log("proof.c[0]: %d", proof.c[0]);
         console.log("proof.c[1]: %d", proof.c[1]);
+        console.log("sender: %d", sender);
         console.log("MerkleTree.root: %d", MerkleTree.root);
         console.log("leftCommitment: %d", leftCommitment);
         console.log("rightCommitment: %d", rightCommitment);
@@ -82,6 +84,7 @@ contract TransactionKeeper is MerkleTree(30) {
             proof.b,
             proof.c,
             [
+                uint256(uint160(sender)),
                 MerkleTree.root,
                 leftCommitment,
                 rightCommitment,
@@ -122,21 +125,24 @@ contract TransactionKeeper is MerkleTree(30) {
         (uint256 inputCommitment, uint256 inputNullifier) = _commitment(
             uint256(uint160(asset)),
             amount,
-            0x1 // salt. Can't have burn salt (0) here, but it doesn't matter what it is
+            0x1, // salt. Can't have burn salt (0) here, but it doesn't matter what it is
+            0x0 // owner
         );
         
         // empty commitments, only used to fill the array
         (/*uint256 inputZeroCommitment*/, uint256 inputZeroNullifier) = _commitment(
             uint256(uint160(asset)),
-            0,
-            0x1 // salt. Can't have burn salt (0) here, but it doesn't matter what it is
+            0, // amount
+            0x1, // salt. Can't have burn salt (0) here, but it doesn't matter what it is
+            0x0 // owner
         );
 
         // rightCommitment is just a hardcoded 0 salt, 0 amount commitment
         (uint256 rightCommitment,) = _commitment(
             uint256(uint160(asset)),
             0, // amount
-            0 // salt (0 is the burn salt)
+            0x0, // salt (0 is the burn salt)
+            0x0 // owner
         );
 
         // construct a fake merkle tree proof leaves=[inputCommitment, rightCommitment]
@@ -166,6 +172,7 @@ contract TransactionKeeper is MerkleTree(30) {
             proof.b,
             proof.c,
             [
+                0, // sender
                 fakeMerkleRoot, // fake merkle root
                 leftCommitment,
                 rightCommitment, // empty commitment
@@ -185,6 +192,7 @@ contract TransactionKeeper is MerkleTree(30) {
 
 
     function split(
+        address sender,
         uint256 leftCommitment,
         uint256 rightCommitment,
         uint256[8] memory nullifiers,
@@ -192,6 +200,7 @@ contract TransactionKeeper is MerkleTree(30) {
     ) internal returns (uint256 leftIndex, uint256 rightIndex) {
         require(
             _checkProof(
+                sender,
                 leftCommitment,
                 rightCommitment,
                 nullifiers,
@@ -209,6 +218,7 @@ contract TransactionKeeper is MerkleTree(30) {
 
 
     function bridge(
+        address sender,
         uint256 localCommitment, // right commitment
         uint256 remoteCommitment, // left commitment
         uint256[8] memory nullifiers,
@@ -216,6 +226,7 @@ contract TransactionKeeper is MerkleTree(30) {
     ) internal returns (uint256 localIndex) {
         require(
             _checkProof(
+                sender,
                 remoteCommitment,
                 localCommitment,
                 nullifiers,
@@ -233,20 +244,23 @@ contract TransactionKeeper is MerkleTree(30) {
     // burns using the left commitment (0 salt)
     // remaining funds from input notes (in nullifiers) goes to right commitment
     function drop(
+        address sender,
         address asset,
         uint256 amount,
         uint256 rightCommitment,
-        uint256[8] memory nullifiers, // TODO: we shouldn't hardcode this array size
+        uint256[8] memory nullifiers,
         ProofCommitment memory proof
     ) internal returns (uint256 rightIndex) {
         (uint256 leftCommitment,) = _commitment(
             uint256(uint160(asset)),
             uint256(amount),
-            0 // salt (0 is the burn salt)
+            0, // salt (0 is the burn salt)
+            0 // doesn't matter since we're burning
         );
 
         require(
             _checkProof(
+                sender,
                 leftCommitment,
                 rightCommitment,
                 nullifiers,
@@ -319,22 +333,24 @@ contract TransactionKeeper is MerkleTree(30) {
     function _nullifier(
         uint256 asset,
         uint256 amount,
-        uint256 salt
+        uint256 salt,
+        uint256 owner
     ) public view returns (uint256) {
         /*console.log("EXAMPLE FROM SOL: %d", poseidonTwo.poseidon([uint256(0), uint256(0)]));
-        console.log("- sol poseidon3 asset: %d", asset);
+        console.log("- sol poseidon4 asset: %d", asset);
         console.log("-               amount: %d", amount);
         console.log("-               salt: %d", salt);*/
-        return poseidonThree.poseidon([asset, amount, salt]);
+        return poseidonThree.poseidon([asset, amount, salt, owner]);
     }
 
 
     function _commitment(
         uint256 asset,
         uint256 amount,
-        uint256 salt
+        uint256 salt,
+        uint256 owner
     ) public view returns (uint256 commitment, uint256 nullifier) {
-        nullifier = _nullifier(asset, amount, salt);
+        nullifier = _nullifier(asset, amount, salt, owner);
         commitment = poseidonTwo.poseidon([
             nullifier,
             salt

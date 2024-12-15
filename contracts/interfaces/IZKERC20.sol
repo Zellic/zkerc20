@@ -16,6 +16,7 @@ interface IZKERC20 {
     ) external returns (uint256);
 
     function _burn(
+        address sender,
         address asset,
         uint256 amount,
         uint256 remainderCommitment,
@@ -24,6 +25,7 @@ interface IZKERC20 {
     ) external returns (uint256);
         
     function _bridge(
+        address sender,
         uint256 leftCommitment,
         uint256 rightCommitment,
         uint256[8] memory nullifier,

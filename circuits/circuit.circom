@@ -52,14 +52,16 @@ template Commitment() {
     signal input asset;
     signal input amount;
     signal input salt;
+    signal input owner;
 
     signal output nullifier;
     signal output commitment;
 
-    component nullifierHasher = Poseidon(3);
+    component nullifierHasher = Poseidon(4);
     nullifierHasher.inputs[0] <== asset;
     nullifierHasher.inputs[1] <== amount;
     nullifierHasher.inputs[2] <== salt;
+    nullifierHasher.inputs[3] <== owner;
     nullifier <== nullifierHasher.out;
 
     component commitmentHasher = Poseidon(2);
@@ -71,22 +73,26 @@ template Commitment() {
 // TODO: refactor into separate file
 template Split(MAX_HEIGHT, NUM_NOTES) {
     // NUM_NOTES in
+    signal input sender;
     signal input root;
     signal input asset; // private
     signal input amounts[NUM_NOTES]; // private
     signal input salts[NUM_NOTES]; // private
+    signal input owners[NUM_NOTES]; // private
 
     // note left
     signal input leftAmount; // private
     signal input leftSalt; // private
+    signal input leftOwner; // private
     signal input leftCommitment;
 
     // note right
     signal input rightAmount; // private
     signal input rightSalt; // private
+    signal input rightOwner; // private
     signal input rightCommitment;
 
-    // should be hash(asset, amount, salt)
+    // should be hash(asset, amount, salt, owner)
     signal input nullifiers[NUM_NOTES];
 
     // leaf of the tree is hash(nullifier, salt)
@@ -109,7 +115,12 @@ template Split(MAX_HEIGHT, NUM_NOTES) {
         commitments[i].asset <== asset;
         commitments[i].amount <== amounts[i];
         commitments[i].salt <== salts[i];
+        commitments[i].owner <== owners[i];
         commitments[i].nullifier === nullifiers[i];
+
+        // either owner is 0 (salt only auth)
+        // or owner is the sender (owner+salt auth)
+        commitments[i].owner * (sender - commitments[i].owner) === 0;
 
         // check that the commitment is not from the burn salt (0)
         // NOTE: technically a 0 salt should never be inserted in the 
@@ -160,17 +171,20 @@ template Split(MAX_HEIGHT, NUM_NOTES) {
     left.asset <== asset;
     left.amount <== leftAmount;
     left.salt <== leftSalt;
+    left.owner <== leftOwner;
     left.commitment === leftCommitment;
 
     component right = Commitment();
     right.asset <== asset;
     right.amount <== rightAmount;
     right.salt <== rightSalt;
+    right.owner <== rightOwner;
     right.commitment === rightCommitment;
 }
 
 component main {
     public [
+        sender,
         root, // contract checks this is the current commitment
         leftCommitment, // contract inserts this into the commitment
         rightCommitment, // contract inserts this into the commitment

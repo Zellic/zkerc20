@@ -71,6 +71,9 @@ class ProofGenerationCached { // TODO: just override ProofGeneration
         this.proofGeneration = new ProofGeneration(_poseidon);
         this.proofCache = {};
 
+        // XXX/TODO: for some reason, proofs that have entered verifyProof can't be reused. Absolutely no idea why not. TODO
+        this.i = 0;
+
         this.poseidon = (inputs) => this.proofGeneration.poseidon(inputs);
 
         // parse json if file exists
@@ -83,10 +86,11 @@ class ProofGenerationCached { // TODO: just override ProofGeneration
         // TODO: use a better hash function lol
         const hashCode = s => s.split('').reduce((a,b)=>{a=((a<<5)-a)+b.charCodeAt(0);return a&a},0)
 
-        const cacheKey = hashCode(''+data);
+        const cacheKey = hashCode(this.i+'|'+data);
+        this.i++;
         if (cacheKey in this.proofCache) {
             console.debug(`Proof cache hit for ${cacheKey}`);
-            //return this.proofCache[cacheKey]; // XXX/TODO: for some reason, proofs that have entered verifyProof can't be reused. Absolutely no idea why not
+            return this.proofCache[cacheKey];
         }
 
         console.debug(`Proof cache miss for ${cacheKey}, generating new proof...`);
@@ -102,10 +106,13 @@ class ProofGenerationCached { // TODO: just override ProofGeneration
 class Commitment {
     _zeroPadConvertUint8Array(x) { return ethers.getBytes(ethers.zeroPadValue(ethers.getBytes(ethers.toBeArray(x)), 32)); } // XXX
 
-    constructor(asset, amount, salt, index = null) {
+    constructor(asset, amount, salt, owner = null, index = null) {
+        if (!owner) owner = 0;
+
         this.asset = asset;
         this.amount = amount;
         this.salt = salt;
+        this.owner = owner;
         this.index = index;
     }
 
@@ -120,7 +127,8 @@ class Commitment {
         let result = proofGeneration.poseidon([
             this.asset,
             this.amount,
-            this.salt
+            this.salt,
+            this.owner
         ]);
         //console.log('nullifier hash result', result, [this.asset, this.amount, this.salt])
         return result;
@@ -185,7 +193,7 @@ class MerkleTree {
 
     // inserts a value into the tree and updates the root
     insert(value) {
-        console.log('INSERTING',value,'AT INDEX',this.index,this.leaves)
+        //console.log('INSERTING',value,'AT INDEX',this.index,this.leaves)
         if (this.index >= 2 ** MAX_HEIGHT) {
             throw new Error("Tree is full");
         }
@@ -292,10 +300,11 @@ class TransactionKeeper {
      */
 
 
-    constructor(poseidon, mimcSponge, getLatestLeaves) {
+    constructor(poseidon, mimcSponge, getLatestLeaves, getSender) {
         this.proofGenerationCached = new ProofGenerationCached(poseidon);
         this.mimcSponge = mimcSponge;
         this.merkleTree = new MerkleTree(mimcSponge, getLatestLeaves);
+        this.getSender = getSender;
     }
 
     // get secure random uint256
@@ -304,7 +313,7 @@ class TransactionKeeper {
     }
 
 
-    async _split(_merkleTree, inputCommitments, leftCommitment, rightCommitment, randFunc) {
+    async _split(sender, _merkleTree, inputCommitments, leftCommitment, rightCommitment, randFunc) {
         // XXX: a bit of a hack, but we need to allow using 0 as salt for 
         // inserts which have a fake merkle root. Onchain needs to calc the 
         // commitments too, so we can't have random salts for those. Privacy 
@@ -337,8 +346,13 @@ class TransactionKeeper {
 
             // must be in the merkle trie
             if (c.index != null && _merkleTree.getValue(c.index) != c.commitmentHash(this.proofGenerationCached)) {
-                console.log({inputCommitment: c, inputCommitmentHashed: c.commitmentHash(this.proofGenerationCached), actualCommitmentAtIndex: _merkleTree.leaves})
+                //console.log({inputCommitment: c, inputCommitmentHashed: c.commitmentHash(this.proofGenerationCached), actualCommitmentAtIndex: _merkleTree.leaves})
                 throw new Error('input commitment index exists in merkle trie, but the value does not match', {inputCommitment: c, inputCommitmentHashed: c.commitmentHash(this.proofGenerationCached), actualCommitmentAtIndex: _merkleTree.getValue(c.index)});
+            }
+
+            // if there is an owner, it must be this address
+            if (c.owner != 0 && c.owner != sender) {
+                throw new Error('input commitment owner must be the sender', { inputCommitment: c, sender });
             }
 
             // cannot be duplicate of another input commitment. This is 
@@ -396,17 +410,22 @@ class TransactionKeeper {
 
         // 4. prove it!
         const proof = await this.proofGenerationCached.prove({
+            sender,
             root: this.mimcSponge.F.toObject(_merkleTree.root),
+
             asset: leftCommitment.asset,
             amounts: inputCommitments.map(c => c.amount),
             salts: inputCommitments.map(c => c.salt),
+            owners: inputCommitments.map(c => c.owner),
 
             leftAmount: leftCommitment.amount,
             leftSalt: leftCommitment.salt,
+            leftOwner: leftCommitment.owner,
             leftCommitment: this.mimcSponge.F.toObject(leftCommitment.commitmentHash(this.proofGenerationCached)),
 
             rightAmount: rightCommitment.amount,
             rightSalt: rightCommitment.salt,
+            rightOwner: rightCommitment.owner,
             rightCommitment: this.mimcSponge.F.toObject(rightCommitment.commitmentHash(this.proofGenerationCached)),
 
             nullifiers: inputCommitments.map(c => this.mimcSponge.F.toObject(c.nullifierHash(this.proofGenerationCached))),
@@ -446,6 +465,7 @@ class TransactionKeeper {
         inputCommitment.index = fakeMerkleTree.insert(inputCommitment.commitmentHash(this.proofGenerationCached));
         leftCommitment.index = fakeMerkleTree.insert(leftCommitment.commitmentHash(this.proofGenerationCached));
         const proof = await this._split(
+            0x0, // fake sender
             fakeMerkleTree,
             [inputCommitment],
             leftCommitment,
@@ -493,7 +513,13 @@ class TransactionKeeper {
             remainderSalt
         );
 
-        const proof = await this._split(this.merkleTree, inputCommitments, leftCommitment, rightCommitment);
+        const proof = await this._split(
+            await this.getSender(),
+            this.merkleTree,
+            inputCommitments,
+            leftCommitment,
+            rightCommitment
+        );
 
         rightCommitment.index = this.merkleTree.insert(rightCommitment.commitmentHash(this.proofGenerationCached));
 
@@ -515,7 +541,13 @@ class TransactionKeeper {
         const localCommitment = new Commitment(asset, localAmount, localSalt);
         const remoteCommitment = new Commitment(asset, remoteAmount, remoteSalt);
 
-        const proof = await this._split(this.merkleTree, inputCommitments, localCommitment, remoteCommitment);
+        const proof = await this._split(
+            await this.getSender(),
+            this.merkleTree,
+            inputCommitments,
+            localCommitment,
+            remoteCommitment
+        );
         
         localCommitment.index = this.merkleTree.insert(localCommitment.commitmentHash(this.proofGenerationCached));
 
@@ -537,7 +569,13 @@ class TransactionKeeper {
         const payoutCommitment = new Commitment(asset, payoutAmount, payoutSalt);
         const remainderCommitment = new Commitment(asset, remainderAmount, remainderSalt);
 
-        const proof = await this._split(this.merkleTree, inputCommitments, payoutCommitment, remainderCommitment);
+        const proof = await this._split(
+            await this.getSender(),
+            this.merkleTree,
+            inputCommitments,
+            payoutCommitment,
+            remainderCommitment
+        );
 
         payoutCommitment.index = this.merkleTree.insert(payoutCommitment.commitmentHash(this.proofGenerationCached));
         remainderCommitment.index = this.merkleTree.insert(remainderCommitment.commitmentHash(this.proofGenerationCached));
@@ -565,13 +603,20 @@ class NodeResult {
 
 
 class Node {
-    constructor() {}
+    constructor() {
+        this.getSender = async function() { return 0x0; };
+    }
 
     // XXX: I'm bad at JS. Not sure how to do async in constructors
-    async initialize(getLatestLeaves) {
+    async initialize(getLatestLeaves, getSender) {
         const poseidon = await buildPoseidon();
         const mimcSponge = await buildMimcSponge();
-        this.transactionKeeper = new TransactionKeeper(poseidon, mimcSponge, getLatestLeaves);
+        this.transactionKeeper = new TransactionKeeper(
+            poseidon,
+            mimcSponge,
+            getLatestLeaves,
+            this.getSender
+        );
     }
     
     // create an insert commitment with fake root containing just the commitment
@@ -687,12 +732,17 @@ class Node {
 
 // this class will be the one that actually connects onchain
 class ConnectedNode extends Node {
-    constructor(ethers, nodeContract, zkerc20Contract) {
+    constructor(ethers, signer, nodeContract, zkerc20Contract) {
         super();
 
         this.ethers = ethers;
+        this.signer = signer;
         this.nodeContract = nodeContract;
         this.zkerc20Contract = zkerc20Contract;
+
+        this.getSender = async function() {
+            return signer.getAddress();
+        }
     }
 
     async lock(asset, amount, salt) {

@@ -50,6 +50,7 @@ contract ZKERC20 is IZKERC20, TransactionKeeper {
 
 
     function _burn(
+        address sender,
         address asset,
         uint256 amount,
         uint256 remainderCommitment,
@@ -58,6 +59,7 @@ contract ZKERC20 is IZKERC20, TransactionKeeper {
     ) external onlyNode returns (uint256) {
         emit Burn(asset, amount);
         return TransactionKeeper.drop(
+            sender,
             asset,
             amount,
             remainderCommitment,
@@ -68,6 +70,7 @@ contract ZKERC20 is IZKERC20, TransactionKeeper {
 
 
     function _bridge(
+        address sender,
         uint256 localCommitment,
         uint256 remoteCommitment,
         uint256[8] memory nullifier,
@@ -75,6 +78,7 @@ contract ZKERC20 is IZKERC20, TransactionKeeper {
     ) external override onlyNode returns (uint256) {
         emit Transfer();
         return TransactionKeeper.bridge(
+            sender,
             localCommitment,
             remoteCommitment,
             nullifier,
@@ -95,6 +99,7 @@ contract ZKERC20 is IZKERC20, TransactionKeeper {
     ) external returns (uint256 payoutIndex, uint256 remainderIndex) {
         emit Transfer();
         return TransactionKeeper.split(
+            msg.sender,
             payoutCommitment,
             remainderCommitment,
             nullifier,
@@ -108,7 +113,7 @@ contract ZKERC20 is IZKERC20, TransactionKeeper {
 
 
     function name() public pure returns (string memory) {
-        return "zkERC20";
+        return "ZKERC20";
     }
     function symbol() public pure returns (string memory) {
         return "ZKERC20";
