@@ -96,14 +96,12 @@ contract TransactionKeeper is MerkleTree(30) {
             ]
         );
 
-        console.log("got here lollll");
         require(valid, "_checkProof: invalid proof");
         if (!valid) { return false; }
 
         // ensures nullifiers are unique (no duplicates in the array) after proof 
         // verification
         for (uint256 i = 0; i < nullifiers.length; i++) {
-            console.log("has %d been spent? %d", nullifiers[i], spent[nullifiers[i]]);
             if (spent[nullifiers[i]]) { return false; }
             spent[nullifiers[i]] = true;
         }

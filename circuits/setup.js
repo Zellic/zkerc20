@@ -79,7 +79,9 @@ class Setup {
 
         let nodeFactory = await ethers.getContractFactory('Node');
         this.node = await nodeFactory.deploy(this.owner, this.poseidon2, this.poseidon3, this.mimcSponge);
-        this.zkerc20 = await this.node.zkerc20();
+
+        let zkerc20Factory = await ethers.getContractFactory('ZKERC20');
+        this.zkerc20 = zkerc20Factory.attach(await this.node.zkerc20());
 
         return {
             node: this.node,

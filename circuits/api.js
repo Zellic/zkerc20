@@ -185,6 +185,7 @@ class MerkleTree {
 
     // inserts a value into the tree and updates the root
     insert(value) {
+        console.log('INSERTING',value,'AT INDEX',this.index,this.leaves)
         if (this.index >= 2 ** MAX_HEIGHT) {
             throw new Error("Tree is full");
         }
@@ -226,7 +227,7 @@ class MerkleTree {
     // recalcs each time (we're assuming we're gonna insert after generating 
     // proof)
     _getRows() {
-        const layers = [this.leaves]
+        const layers = [this.leaves.slice(0, this.leaves.length)] // XXX: idk how to copy array in js
 
         while (layers.length < MAX_HEIGHT + 1) {
             const last = layers[layers.length - 1]
@@ -328,6 +329,25 @@ class TransactionKeeper {
             if (c.asset != leftCommitment.asset) {
                 throw new Error('input commitment asset mismatch', { inputCommitment: c, expectedAsset: leftCommitment.asset });
             }
+
+            // all inputCommitments must have non-null indeces
+            if (c.index == null && c.amount > 0) {
+                throw new Error('input commitment\'s index with non-zero amount cannot be null', { inputCommitment: c });
+            }
+
+            // must be in the merkle trie
+            if (c.index != null && _merkleTree.getValue(c.index) != c.commitmentHash(this.proofGenerationCached)) {
+                console.log({inputCommitment: c, inputCommitmentHashed: c.commitmentHash(this.proofGenerationCached), actualCommitmentAtIndex: _merkleTree.leaves})
+                throw new Error('input commitment index exists in merkle trie, but the value does not match', {inputCommitment: c, inputCommitmentHashed: c.commitmentHash(this.proofGenerationCached), actualCommitmentAtIndex: _merkleTree.getValue(c.index)});
+            }
+
+            // cannot be duplicate of another input commitment. This is 
+            // enforced onchain in _split using the nullifing loop
+            /*inputCommitments.forEach(d => {
+                if (c.nullifierHash(this.proofGenerationCached) == d.nullifierHash(this.proofGenerationCached)) {
+                    throw new Error('input commitment cannot be duplicate of another input commitment', {inputCommitment: c, duplicateOf: d});
+                }
+            })*/ // TODO
         });
 
         if (leftCommitment.asset != rightCommitment.asset) {
@@ -345,13 +365,6 @@ class TransactionKeeper {
         if (inputCommitments.length != NUM_NOTES) {
             throw new Error('input commitments must be of length NUM_NOTES', { inputCommitments });
         }
-
-        // all inputCommitments must have non-null indeces
-        inputCommitments.forEach(c => {
-            if (c.index == null && c.amount > 0) {
-                throw new Error('input commitment\'s index with non-zero amount cannot be null', { inputCommitment: c });
-            }
-        });
 
         // all inputCommitments must have unique indeces (where if amount > 0)
         // this is enfored onchain (not in circuits) using the nullifiers
@@ -441,8 +454,6 @@ class TransactionKeeper {
         );
 
         // we also need to update local state, so just insert it 
-        // TODO/XXX: why do we need to keep local state if we're gona have to 
-        // refetch every time anyway? I guess for tests
         leftCommitment.index = this.merkleTree.insert(leftCommitment.commitmentHash(this.proofGenerationCached));
 
         return {
@@ -452,7 +463,12 @@ class TransactionKeeper {
     }
 
     // unlock
-    async drop(asset, amount, remainderSalt, inputCommitments) {
+    async drop(amount, remainderSalt, inputCommitments) {
+        if (inputCommitments.length == 0) {
+            throw new Error('input commitments for drop must be non-empty', { inputCommitments });
+        }
+        const asset = inputCommitments[0].asset;
+
         // get total amount from input commitments
         const sumInputAmount = inputCommitments.reduce((acc, c) => {
             // RangeError: The number NaN cannot be converted to a BigInt because it is not an integer
@@ -482,6 +498,7 @@ class TransactionKeeper {
         rightCommitment.index = this.merkleTree.insert(rightCommitment.commitmentHash(this.proofGenerationCached));
 
         return {
+            asset,
             remainderCommitment: rightCommitment,
             nullifiedCommitments: inputCommitments,
             proof
@@ -489,7 +506,12 @@ class TransactionKeeper {
     }
 
     // bridge
-    async bridge(asset, localAmount, localSalt, remoteAmount, remoteSalt, inputCommitments) {
+    async bridge(localAmount, localSalt, remoteAmount, remoteSalt, inputCommitments) {
+        if (inputCommitments.length == 0) {
+            throw new Error('input commitments for bridge must be non-empty', { inputCommitments });
+        }
+        const asset = inputCommitments[0].asset;
+
         const localCommitment = new Commitment(asset, localAmount, localSalt);
         const remoteCommitment = new Commitment(asset, remoteAmount, remoteSalt);
 
@@ -498,6 +520,7 @@ class TransactionKeeper {
         localCommitment.index = this.merkleTree.insert(localCommitment.commitmentHash(this.proofGenerationCached));
 
         return {
+            asset,
             localCommitment,
             remoteCommitment,
             proof
@@ -506,14 +529,21 @@ class TransactionKeeper {
 
     // transferFrom
     async split(payoutAmount, payoutSalt, remainderAmount, remainderSalt, inputCommitments) {
+        if (inputCommitments.length == 0) {
+            throw new Error('input commitments for split must be non-empty', { inputCommitments });
+        }
+        const asset = inputCommitments[0].asset;
+
         const payoutCommitment = new Commitment(asset, payoutAmount, payoutSalt);
         const remainderCommitment = new Commitment(asset, remainderAmount, remainderSalt);
 
         const proof = await this._split(this.merkleTree, inputCommitments, payoutCommitment, remainderCommitment);
 
+        payoutCommitment.index = this.merkleTree.insert(payoutCommitment.commitmentHash(this.proofGenerationCached));
         remainderCommitment.index = this.merkleTree.insert(remainderCommitment.commitmentHash(this.proofGenerationCached));
 
         return {
+            asset,
             payoutCommitment,
             remainderCommitment,
             proof
@@ -576,8 +606,8 @@ class Node {
         uint256[8] memory nullifier,
         ProofCommitment memory proof
     ) external { */
-    async unlock(asset, amount, remainderSalt, inputCommitments) {
-        const { remainderCommitment, nullifiedCommitments, proof } = await this.transactionKeeper.drop(asset, amount, remainderSalt, inputCommitments);
+    async unlock(amount, remainderSalt, inputCommitments) {
+        const { asset, remainderCommitment, nullifiedCommitments, proof } = await this.transactionKeeper.drop(amount, remainderSalt, inputCommitments);
         return new NodeResult({
             asset,
             amount,
@@ -597,15 +627,15 @@ class Node {
         uint256[8] memory nullifiers,
         ProofCommitment memory proof
     ) internal returns (uint256 localIndex) { */
-    async bridge(asset, localAmount, localSalt, remoteAmount, remoteSalt, inputCommitments) {
+    async bridge(localAmount, localSalt, remoteAmount, remoteSalt, inputCommitments) {
         // sanity check
         if (localAmount > 0 && localSalt == 0) {
-            throw new Error('disallowing self-griefing by using 0 salt for local commitment with a non-zero amount', { asset, localAmount, localSalt });
+            throw new Error('disallowing self-griefing by using 0 salt for local commitment with a non-zero amount', { localAmount, localSalt });
         } else if (remoteAmount > 0 && remoteSalt == 0) {
-            throw new Error('disallowing self-griefing by using 0 salt for remote commitment with a non-zero amount', { asset, remoteAmount, remoteSalt });
+            throw new Error('disallowing self-griefing by using 0 salt for remote commitment with a non-zero amount', { remoteAmount, remoteSalt });
         }
 
-        const { localCommitment, remoteCommitment, proof } = await this.transactionKeeper.bridge(asset, localAmount, localSalt, remoteAmount, remoteSalt, inputCommitments);
+        const { localCommitment, remoteCommitment, proof } = await this.transactionKeeper.bridge(localAmount, localSalt, remoteAmount, remoteSalt, inputCommitments);
         return new NodeResult({
             localCommitment: ethers.toBigInt(localCommitment.commitmentHash(this.transactionKeeper.proofGenerationCached)),
             remoteCommitment: ethers.toBigInt(remoteCommitment.commitmentHash(this.transactionKeeper.proofGenerationCached)),
@@ -625,15 +655,23 @@ class Node {
         uint256[8] memory nullifier,
         ProofCommitment memory proof
     ) external returns (uint256 payoutIndex, uint256 remainderIndex) { */
-    async transferFrom(asset, payoutAmount, payoutSalt, remainderAmount, remainderSalt, inputCommitments) {
+    async transferFrom(payoutAmount, payoutSalt, remainderSalt, inputCommitments) {
+        // figure out the remainderCommitment's amount given the payout amount
+        const sumInputAmount = inputCommitments.reduce((acc, c) => acc + c.amount, 0);
+        if (sumInputAmount < payoutAmount) {
+            throw new Error('input commitments amount is less than payout amount', { payoutAmount, sumInputAmount, inputCommitments });
+        }
+        const remainderAmount = sumInputAmount - payoutAmount;
+
         // sanity check
         if (payoutAmount > 0 && payoutSalt == 0) {
-            throw new Error('disallowing self-griefing by using 0 salt for payout commitment with a non-zero amount', { asset, payoutAmount, payoutSalt });
+            throw new Error('disallowing self-griefing by using 0 salt for payout commitment with a non-zero amount', { payoutAmount, payoutSalt });
         } else if (remainderAmount > 0 && remainderSalt == 0) {
-            throw new Error('disallowing self-griefing by using 0 salt for remainder commitment with a non-zero amount', { asset, remainderAmount, remainderSalt });
+            throw new Error('disallowing self-griefing by using 0 salt for remainder commitment with a non-zero amount', { remainderAmount, remainderSalt });
         }
 
         const { payoutCommitment, remainderCommitment, proof } = await this.transactionKeeper.split(payoutAmount, payoutSalt, remainderAmount, remainderSalt, inputCommitments);
+
         return new NodeResult({
             payoutCommitment: payoutCommitment.commitmentHash(this.transactionKeeper.proofGenerationCached),
             remainderCommitment: remainderCommitment.commitmentHash(this.transactionKeeper.proofGenerationCached),
@@ -649,11 +687,12 @@ class Node {
 
 // this class will be the one that actually connects onchain
 class ConnectedNode extends Node {
-    constructor(ethers, nodeContract) {
+    constructor(ethers, nodeContract, zkerc20Contract) {
         super();
 
         this.ethers = ethers;
         this.nodeContract = nodeContract;
+        this.zkerc20Contract = zkerc20Contract;
     }
 
     async lock(asset, amount, salt) {
@@ -662,9 +701,15 @@ class ConnectedNode extends Node {
         return result;
     }
 
-    async unlock(asset, amount, remainderSalt, inputCommitments) {
-        const result = await super.unlock(asset, amount, remainderSalt, inputCommitments);
+    async unlock(amount, remainderSalt, inputCommitments) {
+        const result = await super.unlock(amount, remainderSalt, inputCommitments);
         await this.nodeContract.unlock(result.args.asset, result.args.amount, result.args.remainderCommitment, result.args.nullifier, result.args.proof);
+        return result;
+    }
+
+    async transferFrom(payoutAmount, payoutSalt, remainderSalt, inputCommitments) {
+        const result = await super.transferFrom(payoutAmount, payoutSalt, remainderSalt, inputCommitments);
+        await this.zkerc20Contract.transferFrom(result.args.payoutCommitment, result.args.remainderCommitment, result.args.nullifiers, result.args.proof);
         return result;
     }
 }
