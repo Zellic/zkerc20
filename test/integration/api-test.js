@@ -1,8 +1,8 @@
 const { expect } = require("chai");
 //const { ethers } = require("hardhat");
 
-const { Node, ConnectedNode, Commitment } = require("../../circuits/api");
-const { Setup } = require("../../circuits/setup");
+const { Node, ConnectedNode, Commitment } = require("../../lib/api");
+const { Setup } = require("../../lib/setup");
 
 // https://github.com/iden3/circomlibjs/blob/main/test/poseidoncontract.js
 // https://cn.bing.com/search?q=contractfactory+deploy+ethers+6.6.2&form=QBLH&sp=-1&lq=0&pq=contractfactory+deploy+ethers+6.6&sc=7-33&qs=n&sk=&cvid=400DDB4C8F184F318932B1C75CA2C4AF&ghsh=0&ghacc=0&ghpl=
