@@ -31,6 +31,10 @@ contract TransactionKeeper is MerkleTree(30) {
         uint256 amount
     );
 
+    event Nullified (
+        uint256 nullifier
+    );
+
 
     Groth16Verifier public verifier = new Groth16Verifier();
     mapping(uint256 => bool) public spent;
@@ -106,6 +110,8 @@ contract TransactionKeeper is MerkleTree(30) {
         // verification
         for (uint256 i = 0; i < nullifiers.length; i++) {
             if (spent[nullifiers[i]]) { return false; }
+
+            emit Nullified(nullifiers[i]);
             spent[nullifiers[i]] = true;
         }
 

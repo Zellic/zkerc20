@@ -313,6 +313,15 @@ class TransactionKeeper {
     }
 
 
+    _nullifierHash(commitment) {
+        return commitment.nullifierHash(this.proofGenerationCached);
+    }
+
+    _commitmentHash(commitment) {
+        return commitment.commitmentHash(this.proofGenerationCached);
+    }
+
+
     async _split(sender, _merkleTree, inputCommitments, leftCommitment, rightCommitment, randFunc) {
         // XXX: a bit of a hack, but we need to allow using 0 as salt for 
         // inserts which have a fake merkle root. Onchain needs to calc the 
@@ -345,9 +354,9 @@ class TransactionKeeper {
             }
 
             // must be in the merkle trie
-            if (c.index != null && _merkleTree.getValue(c.index) != c.commitmentHash(this.proofGenerationCached)) {
+            if (c.index != null && _merkleTree.getValue(c.index) != this._commitmentHash(c)) {
                 //console.log({inputCommitment: c, inputCommitmentHashed: c.commitmentHash(this.proofGenerationCached), actualCommitmentAtIndex: _merkleTree.leaves})
-                throw new Error('input commitment index exists in merkle trie, but the value does not match', {inputCommitment: c, inputCommitmentHashed: c.commitmentHash(this.proofGenerationCached), actualCommitmentAtIndex: _merkleTree.getValue(c.index)});
+                throw new Error('input commitment index exists in merkle trie, but the value does not match', {inputCommitment: c, inputCommitmentHashed: this._commitmentHash(c), actualCommitmentAtIndex: _merkleTree.getValue(c.index)});
             }
 
             // if there is an owner, it must be this address
@@ -401,10 +410,10 @@ class TransactionKeeper {
 
         console.debug('---- API split ----');
         console.debug('root:', ethers.toBigInt(_merkleTree.root));
-        console.debug('leftCommitment:', ethers.toBigInt(leftCommitment.commitmentHash(this.proofGenerationCached)));
-        console.debug('rightCommitment:', ethers.toBigInt(rightCommitment.commitmentHash(this.proofGenerationCached)));
+        console.debug('leftCommitment:', ethers.toBigInt(this._commitmentHash(leftCommitment)));
+        console.debug('rightCommitment:', ethers.toBigInt(this._commitmentHash(rightCommitment)));
         for (var i = 0; i < inputCommitments.length; i++)
-            console.debug('nullifiers['+i+']:', ethers.toBigInt(inputCommitments[i].nullifierHash(this.proofGenerationCached)));
+            console.debug('nullifiers['+i+']:', ethers.toBigInt(this._nullifierHash(inputCommitments[i])));
         console.debug('-------------------');
 
 
@@ -421,14 +430,14 @@ class TransactionKeeper {
             leftAmount: leftCommitment.amount,
             leftSalt: leftCommitment.salt,
             leftOwner: leftCommitment.owner,
-            leftCommitment: this.mimcSponge.F.toObject(leftCommitment.commitmentHash(this.proofGenerationCached)),
+            leftCommitment: this.mimcSponge.F.toObject(this._commitmentHash(leftCommitment)),
 
             rightAmount: rightCommitment.amount,
             rightSalt: rightCommitment.salt,
             rightOwner: rightCommitment.owner,
-            rightCommitment: this.mimcSponge.F.toObject(rightCommitment.commitmentHash(this.proofGenerationCached)),
+            rightCommitment: this.mimcSponge.F.toObject(this._commitmentHash(rightCommitment)),
 
-            nullifiers: inputCommitments.map(c => this.mimcSponge.F.toObject(c.nullifierHash(this.proofGenerationCached))),
+            nullifiers: inputCommitments.map(c => this.mimcSponge.F.toObject(this._nullifierHash(c))),
             
             // signal input path[NUM_NOTES][MAX_HEIGHT];
             // signal input sides[NUM_NOTES][MAX_HEIGHT];
@@ -462,8 +471,8 @@ class TransactionKeeper {
         // we have to insert the fake inputCommitment to satisfy circuits
         // NOTE: on-chain, this is implemented in TransactionKeeper._verifyInsertProof
 
-        inputCommitment.index = fakeMerkleTree.insert(inputCommitment.commitmentHash(this.proofGenerationCached));
-        leftCommitment.index = fakeMerkleTree.insert(leftCommitment.commitmentHash(this.proofGenerationCached));
+        inputCommitment.index = fakeMerkleTree.insert(this._commitmentHash(inputCommitment));
+        leftCommitment.index = fakeMerkleTree.insert(this._commitmentHash(leftCommitment));
         const proof = await this._split(
             0x0, // fake sender
             fakeMerkleTree,
@@ -474,7 +483,7 @@ class TransactionKeeper {
         );
 
         // we also need to update local state, so just insert it 
-        leftCommitment.index = this.merkleTree.insert(leftCommitment.commitmentHash(this.proofGenerationCached));
+        leftCommitment.index = this.merkleTree.insert(this._commitmentHash(leftCommitment));
 
         return {
             commitment: leftCommitment,
@@ -521,7 +530,7 @@ class TransactionKeeper {
             rightCommitment
         );
 
-        rightCommitment.index = this.merkleTree.insert(rightCommitment.commitmentHash(this.proofGenerationCached));
+        rightCommitment.index = this.merkleTree.insert(this._commitmentHash(rightCommitment));
 
         return {
             asset,
@@ -549,7 +558,7 @@ class TransactionKeeper {
             remoteCommitment
         );
         
-        localCommitment.index = this.merkleTree.insert(localCommitment.commitmentHash(this.proofGenerationCached));
+        localCommitment.index = this.merkleTree.insert(this._commitmentHash(localCommitment));
 
         return {
             asset,
@@ -576,8 +585,8 @@ class TransactionKeeper {
             remainderCommitment
         );
 
-        payoutCommitment.index = this.merkleTree.insert(payoutCommitment.commitmentHash(this.proofGenerationCached));
-        remainderCommitment.index = this.merkleTree.insert(remainderCommitment.commitmentHash(this.proofGenerationCached));
+        payoutCommitment.index = this.merkleTree.insert(this._commitmentHash(payoutCommitment));
+        remainderCommitment.index = this.merkleTree.insert(this._commitmentHash(remainderCommitment));
 
         return {
             asset,
@@ -617,6 +626,15 @@ class Node {
             this.getSender
         );
     }
+
+
+    _nullifierHash(commitment) {
+        return commitment.nullifierHash(this.transactionKeeper.proofGenerationCached);
+    }
+    _commitmentHash(commitment) {
+        return commitment.commitmentHash(this.transactionKeeper.proofGenerationCached);
+    }
+
     
     // create an insert commitment with fake root containing just the commitment
     async lock(asset, amount, salt) {
@@ -629,7 +647,7 @@ class Node {
         return new NodeResult({
             asset,
             amount,
-            commitment: ethers.toBigInt(commitment.commitmentHash(this.transactionKeeper.proofGenerationCached)),
+            commitment: ethers.toBigInt(this._commitmentHash(commitment)),
             proof
         }, {
             inserted: [commitment]
@@ -642,8 +660,8 @@ class Node {
         return new NodeResult({
             asset,
             amount,
-            remainderCommitment: ethers.toBigInt(remainderCommitment.commitmentHash(this.transactionKeeper.proofGenerationCached)),
-            nullifier: nullifiedCommitments.map(n => n.nullifierHash(this.transactionKeeper.proofGenerationCached)),
+            remainderCommitment: ethers.toBigInt(this._commitmentHash(remainderCommitment)),
+            nullifier: nullifiedCommitments.map(n => this._nullifierHash(n)),
             proof
         }, {
             inserted: [remainderCommitment],
@@ -662,9 +680,9 @@ class Node {
 
         const { localCommitment, remoteCommitment, proof } = await this.transactionKeeper.bridge(localAmount, localSalt, remoteAmount, remoteSalt, inputCommitments);
         return new NodeResult({
-            localCommitment: ethers.toBigInt(localCommitment.commitmentHash(this.transactionKeeper.proofGenerationCached)),
-            remoteCommitment: ethers.toBigInt(remoteCommitment.commitmentHash(this.transactionKeeper.proofGenerationCached)),
-            nullifiers: inputCommitments.map(n => n.nullifierHash(this.transactionKeeper.proofGenerationCached)),
+            localCommitment: ethers.toBigInt(this._commitmentHash(localCommitment)),
+            remoteCommitment: ethers.toBigInt(this._commitmentHash(remoteCommitment)),
+            nullifiers: inputCommitments.map(n => this._nullifierHash(n)),
             proof
         }, {
             inserted: [localCommitment, remoteCommitment], // TODO: distinguish between chains in an object?
@@ -693,9 +711,9 @@ class Node {
         const { payoutCommitment, remainderCommitment, proof } = await this.transactionKeeper.split(payoutAmount, payoutSalt, payoutOwner, remainderAmount, remainderSalt, inputCommitments);
 
         return new NodeResult({
-            payoutCommitment: payoutCommitment.commitmentHash(this.transactionKeeper.proofGenerationCached),
-            remainderCommitment: remainderCommitment.commitmentHash(this.transactionKeeper.proofGenerationCached),
-            nullifiers: inputCommitments.map(n => n.nullifierHash(this.transactionKeeper.proofGenerationCached)),
+            payoutCommitment: this._commitmentHash(payoutCommitment),
+            remainderCommitment: this._commitmentHash(remainderCommitment),
+            nullifiers: inputCommitments.map(n => this._nullifierHash(n)),
             proof
         }, {
             inserted: [payoutCommitment, remainderCommitment],

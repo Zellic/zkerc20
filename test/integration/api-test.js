@@ -109,7 +109,6 @@ describe.only("JS API tests", function () {
         expect(await token.balanceOf(owner.address)).to.equal(amount);
     }).timeout(1000000);*/
 
-    /*
     it("integration - lock, transfer, unlock", async function() {
         let amount = 100000;
         let nonce = 1234;
@@ -142,7 +141,6 @@ describe.only("JS API tests", function () {
         );
         expect(await token.balanceOf(owner.address)).to.equal(amount);
     }).timeout(1000000);
-    */
 
     /*
     it("integration - lock, transfer (owned), unlock", async function() {
