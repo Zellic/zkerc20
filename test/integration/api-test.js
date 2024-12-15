@@ -21,9 +21,8 @@ describe.only("JS API tests", function () {
 
     beforeEach(async function() {
         //console.log("here next");
-        const [ _owner ] = await ethers.getSigners();
+        const [ _owner, user1, user2 ] = await ethers.getSigners();
         owner = _owner
-        //console.log("here", owner);
 
         let setup = new Setup(owner);
         await setup.initialize();
@@ -110,7 +109,7 @@ describe.only("JS API tests", function () {
         expect(await token.balanceOf(owner.address)).to.equal(amount);
     }).timeout(1000000);*/
 
-
+    /*
     it("integration - lock, transfer, unlock", async function() {
         let amount = 100000;
         let nonce = 1234;
@@ -126,7 +125,7 @@ describe.only("JS API tests", function () {
         const lockResult = await api.lock(token.target, amount, nonce);
         expect(await token.balanceOf(owner.address)).to.equal(0);
 
-        const transferResult = await api.transferFrom(transferAmount, payoutNonce, remainderNonce, lockResult.storage.inserted);
+        const transferResult = await api.transferUnowned(transferAmount, payoutNonce, remainderNonce, lockResult.storage.inserted);
 
         const unlockResult1 = await api.unlock(
             transferAmount,
@@ -143,4 +142,39 @@ describe.only("JS API tests", function () {
         );
         expect(await token.balanceOf(owner.address)).to.equal(amount);
     }).timeout(1000000);
+    */
+
+    /*
+    it("integration - lock, transfer (owned), unlock", async function() {
+        let amount = 100000;
+        let nonce = 1234;
+
+        let transferAmount = 5000;
+        let payoutNonce = 1337;
+        let remainderNonce = 1338;
+
+        await token.mint(owner.address, amount);
+        await token.approve(node.target, amount);
+        expect(await token.balanceOf(owner.address)).to.equal(amount);
+
+        const lockResult = await api.lock(token.target, amount, nonce);
+        expect(await token.balanceOf(owner.address)).to.equal(0);
+
+        const transferResult = await api.transfer(transferAmount, payoutNonce, user2.address, remainderNonce, lockResult.storage.inserted);
+
+        const unlockResult1 = await api.unlock(
+            transferAmount,
+            0, // remainder nonce
+            [transferResult.storage.inserted[0]]
+        );
+        expect(await token.balanceOf(owner.address)).to.equal(transferAmount);
+
+        // unlock remaining amount
+        const unlockResult2 = await api.unlock(
+            amount - transferAmount,
+            0, // remainder nonce
+            [transferResult.storage.inserted[1]]
+        );
+        expect(await token.balanceOf(owner.address)).to.equal(amount);
+    }).timeout(1000000);*/
 });

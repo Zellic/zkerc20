@@ -90,7 +90,7 @@ class ProofGenerationCached { // TODO: just override ProofGeneration
         this.i++;
         if (cacheKey in this.proofCache) {
             console.debug(`Proof cache hit for ${cacheKey}`);
-            return this.proofCache[cacheKey];
+            //return this.proofCache[cacheKey]; // XXX: somehow verifyProof knows if it's been verified before
         }
 
         console.debug(`Proof cache miss for ${cacheKey}, generating new proof...`);
@@ -559,14 +559,13 @@ class TransactionKeeper {
         };
     }
 
-    // transferFrom
-    async split(payoutAmount, payoutSalt, remainderAmount, remainderSalt, inputCommitments) {
+    async split(payoutAmount, payoutSalt, payoutOwner, remainderAmount, remainderSalt, inputCommitments) {
         if (inputCommitments.length == 0) {
             throw new Error('input commitments for split must be non-empty', { inputCommitments });
         }
         const asset = inputCommitments[0].asset;
 
-        const payoutCommitment = new Commitment(asset, payoutAmount, payoutSalt);
+        const payoutCommitment = new Commitment(asset, payoutAmount, payoutSalt, payoutOwner);
         const remainderCommitment = new Commitment(asset, remainderAmount, remainderSalt);
 
         const proof = await this._split(
@@ -620,12 +619,6 @@ class Node {
     }
     
     // create an insert commitment with fake root containing just the commitment
-    /* function lock(
-        address token,
-        uint256 amount,
-        uint256 commitment,
-        ProofCommitment memory proof
-    ) external returns (uint256 receipt); */
     async lock(asset, amount, salt) {
         // sanity check
         if (amount > 0 && salt == 0) {
@@ -644,13 +637,6 @@ class Node {
     }
 
     // unlock a commitment
-    /* function unlock(
-        address token,
-        uint256 amount,
-        uint256 remainderCommitment,
-        uint256[8] memory nullifier,
-        ProofCommitment memory proof
-    ) external { */
     async unlock(amount, remainderSalt, inputCommitments) {
         const { asset, remainderCommitment, nullifiedCommitments, proof } = await this.transactionKeeper.drop(amount, remainderSalt, inputCommitments);
         return new NodeResult({
@@ -666,12 +652,6 @@ class Node {
     }
 
     // bridge a commitment
-    /* function bridge(
-        uint256 localCommitment, // right commitment
-        uint256 remoteCommitment, // left commitment
-        uint256[8] memory nullifiers,
-        ProofCommitment memory proof
-    ) internal returns (uint256 localIndex) { */
     async bridge(localAmount, localSalt, remoteAmount, remoteSalt, inputCommitments) {
         // sanity check
         if (localAmount > 0 && localSalt == 0) {
@@ -693,14 +673,9 @@ class Node {
     }
 
 
-    // transfer (split) a commitment
-    /* function transferFrom(
-        uint256 payoutCommitment,
-        uint256 remainderCommitment,
-        uint256[8] memory nullifier,
-        ProofCommitment memory proof
-    ) external returns (uint256 payoutIndex, uint256 remainderIndex) { */
-    async transferFrom(payoutAmount, payoutSalt, remainderSalt, inputCommitments) {
+    // XXX: pick a better name
+    // transfer (split) a commitment, choose salt auth only
+    async transfer(payoutAmount, payoutSalt, payoutOwner, remainderSalt, inputCommitments) {
         // figure out the remainderCommitment's amount given the payout amount
         const sumInputAmount = inputCommitments.reduce((acc, c) => acc + c.amount, 0);
         if (sumInputAmount < payoutAmount) {
@@ -715,7 +690,7 @@ class Node {
             throw new Error('disallowing self-griefing by using 0 salt for remainder commitment with a non-zero amount', { remainderAmount, remainderSalt });
         }
 
-        const { payoutCommitment, remainderCommitment, proof } = await this.transactionKeeper.split(payoutAmount, payoutSalt, remainderAmount, remainderSalt, inputCommitments);
+        const { payoutCommitment, remainderCommitment, proof } = await this.transactionKeeper.split(payoutAmount, payoutSalt, payoutOwner, remainderAmount, remainderSalt, inputCommitments);
 
         return new NodeResult({
             payoutCommitment: payoutCommitment.commitmentHash(this.transactionKeeper.proofGenerationCached),
@@ -726,6 +701,12 @@ class Node {
             inserted: [payoutCommitment, remainderCommitment],
             nullified: inputCommitments
         });
+    }
+
+
+    // transfer (split) a commitment, choose an owner+salt
+    async transferUnowned(payoutAmount, payoutSalt, remainderSalt, inputCommitments) {
+        return await this.transfer(payoutAmount, payoutSalt, 0x0, remainderSalt, inputCommitments);
     }
 }
 
@@ -757,10 +738,14 @@ class ConnectedNode extends Node {
         return result;
     }
 
-    async transferFrom(payoutAmount, payoutSalt, remainderSalt, inputCommitments) {
-        const result = await super.transferFrom(payoutAmount, payoutSalt, remainderSalt, inputCommitments);
+    async transfer(payoutAmount, payoutSalt, payoutOwner, remainderSalt, inputCommitments) {
+        const result = await super.transfer(payoutAmount, payoutSalt, payoutOwner, remainderSalt, inputCommitments);
         await this.zkerc20Contract.transferFrom(result.args.payoutCommitment, result.args.remainderCommitment, result.args.nullifiers, result.args.proof);
         return result;
+    }
+
+    async transferUnowned(payoutAmount, payoutSalt, remainderSalt, inputCommitments) {
+        return await this.transfer(payoutAmount, payoutSalt, 0x0, remainderSalt, inputCommitments);
     }
 }
 
