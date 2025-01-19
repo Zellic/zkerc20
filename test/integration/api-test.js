@@ -10,6 +10,8 @@ const { Setup } = require("../../lib/setup");
 
 describe.only("JS API tests", function () {
     let owner;
+    let user1;
+    let user2;
 
     let api;
     let node;
@@ -21,8 +23,10 @@ describe.only("JS API tests", function () {
 
     beforeEach(async function() {
         //console.log("here next");
-        const [ _owner, user1, user2 ] = await ethers.getSigners();
+        const [ _owner, _user1, _user2 ] = await ethers.getSigners();
         owner = _owner
+        user1 = _user1
+        user2 = _user2
 
         let setup = new Setup(owner);
         await setup.initialize();
@@ -109,6 +113,7 @@ describe.only("JS API tests", function () {
         expect(await token.balanceOf(owner.address)).to.equal(amount);
     }).timeout(1000000);*/
 
+        /*
     it("integration - lock, transfer, unlock", async function() {
         let amount = 100000;
         let nonce = 1234;
@@ -141,8 +146,9 @@ describe.only("JS API tests", function () {
         );
         expect(await token.balanceOf(owner.address)).to.equal(amount);
     }).timeout(1000000);
+    */
 
-    /*
+    
     it("integration - lock, transfer (owned), unlock", async function() {
         let amount = 100000;
         let nonce = 1234;
@@ -158,8 +164,7 @@ describe.only("JS API tests", function () {
         const lockResult = await api.lock(token.target, amount, nonce);
         expect(await token.balanceOf(owner.address)).to.equal(0);
 
-        const transferResult = await api.transfer(transferAmount, payoutNonce, user2.address, remainderNonce, lockResult.storage.inserted);
-
+        const transferResult = await api.transfer(transferAmount, payoutNonce, owner.address, remainderNonce, lockResult.storage.inserted);
         const unlockResult1 = await api.unlock(
             transferAmount,
             0, // remainder nonce
@@ -174,5 +179,5 @@ describe.only("JS API tests", function () {
             [transferResult.storage.inserted[1]]
         );
         expect(await token.balanceOf(owner.address)).to.equal(amount);
-    }).timeout(1000000);*/
+    }).timeout(1000000);
 });

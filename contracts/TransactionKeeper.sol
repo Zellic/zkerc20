@@ -5,11 +5,9 @@ import { console } from "hardhat/console.sol";
 
 import { MerkleTree } from "./MerkleTree.sol";
 import { Groth16Verifier } from "../circuits/verifier.sol";
-import {
-    IPoseidonTwo,
-    IPoseidonFour,
-    IMimcSponge
-} from "./HashContracts.sol";
+import { IPoseidonTwo } from "./interfaces/IPoseidonTwo.sol";
+import { IPoseidonFour } from "./interfaces/IPoseidonFour.sol";
+import { IMimcSponge } from "./interfaces/IMimcSponge.sol";
 
 struct ProofCommitment {
     uint256[2] a;
