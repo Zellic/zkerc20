@@ -1,8 +1,11 @@
 const { expect } = require("chai");
+const { network } = require("hardhat");
 //const { ethers } = require("hardhat");
 
 const { Node, ConnectedNode, Commitment } = require("../../lib/api");
 const { Setup } = require("../../lib/setup");
+
+const { reset } = require("../../lib/transactionKeeper.js"); // TODO
 
 // https://github.com/iden3/circomlibjs/blob/main/test/poseidoncontract.js
 // https://cn.bing.com/search?q=contractfactory+deploy+ethers+6.6.2&form=QBLH&sp=-1&lq=0&pq=contractfactory+deploy+ethers+6.6&sc=7-33&qs=n&sk=&cvid=400DDB4C8F184F318932B1C75CA2C4AF&ghsh=0&ghacc=0&ghpl=
@@ -22,6 +25,8 @@ describe.only("JS API tests", function () {
     let assetA = 0xdeadbeef;
 
     beforeEach(async function() {
+        await reset();
+
         //console.log("here next");
         const [ _owner, _user1, _user2 ] = await ethers.getSigners();
         owner = _owner
@@ -113,7 +118,7 @@ describe.only("JS API tests", function () {
         expect(await token.balanceOf(owner.address)).to.equal(amount);
     }).timeout(1000000);*/
 
-        /*
+    
     it("integration - lock, transfer, unlock", async function() {
         let amount = 100000;
         let nonce = 1234;
@@ -146,10 +151,10 @@ describe.only("JS API tests", function () {
         );
         expect(await token.balanceOf(owner.address)).to.equal(amount);
     }).timeout(1000000);
-    */
+    
 
     
-    it("integration - lock, transfer (owned), unlock", async function() {
+    /*it("integration - lock, transfer (owned), unlock", async function() {
         let amount = 100000;
         let nonce = 1234;
 
@@ -179,5 +184,5 @@ describe.only("JS API tests", function () {
             [transferResult.storage.inserted[1]]
         );
         expect(await token.balanceOf(owner.address)).to.equal(amount);
-    }).timeout(1000000);
+    }).timeout(1000000);*/
 });
