@@ -35,13 +35,14 @@ contract Node is BridgeManager {
         uint256 amount,
         uint256 commitment,
         ProofCommitment memory proof
-    ) external returns (uint256 receipt) {
+    ) external returns (uint256 index) {
         // take the user's original ERC20 tokens
         address originalToken = wrappedToNative[token];
         if (originalToken != address(0)) {
             // we're re-wrapping a token
             IWZKERC20(token).burn(msg.sender, amount);
-            receipt = zkerc20._mint(
+
+            index = zkerc20._mint(
                 originalToken,
                 amount,
                 commitment,
@@ -50,9 +51,9 @@ contract Node is BridgeManager {
         } else {
             // we're wrapping a native token
             IERC20(token).safeTransferFrom(msg.sender, address(this), amount);
-
             isNative[token] = true;
-            receipt = zkerc20._mint(
+
+            index = zkerc20._mint(
                 token,
                 amount,
                 commitment,
@@ -79,8 +80,8 @@ contract Node is BridgeManager {
         uint256 remainderCommitment,
         uint256[8] memory nullifier,
         ProofCommitment memory proof
-    ) external {
-        zkerc20._burn(
+    ) external returns (uint256 remainderCommitment) {
+        remainderCommitment = zkerc20._burn(
             msg.sender,
             token,
             amount,
@@ -122,8 +123,8 @@ contract Node is BridgeManager {
         uint256 remoteCommitment, // commitment to send to dest chain
         uint256[8] memory nullifiers,
         ProofCommitment memory proof
-    ) external {
-        zkerc20._bridge(
+    ) external returns (uint256 remainderCommitment) {
+        remainderCommitment = zkerc20._bridge(
             msg.sender,
             localCommitment,
             remoteCommitment,
