@@ -1,6 +1,5 @@
 const { expect } = require("chai");
 const { network } = require("hardhat");
-//const { ethers } = require("hardhat");
 
 const { Node, ConnectedNode, Commitment } = require("../../lib/api");
 const { Setup } = require("../../lib/setup");

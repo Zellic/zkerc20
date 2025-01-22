@@ -1,5 +1,6 @@
 //require("@nomicfoundation/hardhat-toolbox");
 //require("@nomicfoundation/hardhat-foundry");
+require("@nomiclabs/hardhat-ethers");
 
 /** @type import('hardhat/config').HardhatUserConfig */
 module.exports = {

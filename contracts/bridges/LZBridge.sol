@@ -2,8 +2,8 @@
 pragma solidity ^0.8.27;
 
 import { Bridge } from "./Bridge.sol";
-import { OApp, Origin, MessagingFee } from "@layerzerolabs/lz-evm-oapp-v2/contracts/oapp/OApp.sol";
-import { OptionsBuilder } from "@layerzerolabs/lz-evm-oapp-v2/contracts/oapp/libs/OptionsBuilder.sol";
+import { OApp, Origin, MessagingFee } from "@layerzerolabs/oapp-evm/contracts/oapp/OApp.sol";
+import { OptionsBuilder } from "@layerzerolabs/oapp-evm/contracts/oapp/libs/OptionsBuilder.sol";
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 
 contract LZBridge is Bridge, OApp {
