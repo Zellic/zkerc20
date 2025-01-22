@@ -17,10 +17,12 @@ PTAU := powersOfTau28_hez_final_21.ptau
 
 
 %.r1cs: circuit.circom
+	@circom --version > /dev/null 2>&1 || (echo "circom is not installed. Please install it: https://docs.circom.io/getting-started/installation/"; exit 1)
 	circom $< --r1cs --wasm --sym
 
 
 %.ptau:
+	@wget --version > /dev/null 2>&1 || (echo "wget is not installed. Please install it, or manually download the $@ file and place it in circuits/"; exit 1)
 	wget https://storage.googleapis.com/zkevm/ptau/$@
 
 
