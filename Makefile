@@ -10,7 +10,6 @@ test: node_modules
 
 clean:
 	$(MAKE) -C $(CIRCUITS) clean
-	forge clean
 	npx hardhat clean
 
 
