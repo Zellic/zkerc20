@@ -1,4 +1,16 @@
-Deposit any ERC-20, and receive a corresponding zkERC20 token. These can be transferred to any user and bridged to any chain---without revealing the token type, amount, or receiver.
+Deposit any ERC-20, and receive corresponding zkERC20 tokens. These can be transferred to any user and bridged to any chain — without revealing the token type, amount, or receiver.
+
+# Usage
+
+Dependencies:
+- [`circom`](https://docs.circom.io/getting-started/installation/)
+- [`npm`](https://docs.npmjs.com/downloading-and-installing-node-js-and-npm)
+
+To install and run tests, in the cloned directory, simply run:
+
+```bash
+make test
+```
 
 # About
 
