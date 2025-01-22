@@ -32,6 +32,8 @@ describe.only("JS API tests", function () {
         user1 = _user1
         user2 = _user2
 
+        console.log('asdf')
+
         let setup = new Setup(owner);
         await setup.initialize();
         node = setup.node;
