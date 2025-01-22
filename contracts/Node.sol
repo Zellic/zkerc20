@@ -80,8 +80,8 @@ contract Node is BridgeManager {
         uint256 remainderCommitment,
         uint256[8] memory nullifier,
         ProofCommitment memory proof
-    ) external returns (uint256 remainderCommitment) {
-        remainderCommitment = zkerc20._burn(
+    ) external returns (uint256 rightIndex) {
+        rightIndex = zkerc20._burn(
             msg.sender,
             token,
             amount,
