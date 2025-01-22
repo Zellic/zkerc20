@@ -10,6 +10,16 @@ const { reset } = require("../../lib/transactionKeeper.js"); // TODO
 // https://cn.bing.com/search?q=contractfactory+deploy+ethers+6.6.2&form=QBLH&sp=-1&lq=0&pq=contractfactory+deploy+ethers+6.6&sc=7-33&qs=n&sk=&cvid=400DDB4C8F184F318932B1C75CA2C4AF&ghsh=0&ghacc=0&ghpl=
 // https://docs.ethers.org/v6/single-page/
 
+// XXX
+function bigNumberToInt(bn) {
+    return parseInt(bn.toString());
+}
+
+// XXX: move somewhere better
+async function expectBalance(token, address, amount) {
+    expect(bigNumberToInt(await token.balanceOf(address))).to.equal(amount);
+}
+
 describe.only("JS API tests", function () {
     let owner;
     let user1;
@@ -32,8 +42,6 @@ describe.only("JS API tests", function () {
         user1 = _user1
         user2 = _user2
 
-        console.log('asdf')
-
         let setup = new Setup(owner);
         await setup.initialize();
         node = setup.node;
@@ -53,14 +61,17 @@ describe.only("JS API tests", function () {
 
     it("hash contracts - comparison tests", async function() {
         let check = async function(amount, nonce) {
-            let commitment = new Commitment(token.target, amount, nonce, 0);
-            let offchainNullifierHash = await ethers.toBigInt(commitment.nullifierHash(api.transactionKeeper.proofGenerationCached));
-            let offchainCommitmentHash = await ethers.toBigInt(commitment.commitmentHash(api.transactionKeeper.proofGenerationCached));
+            let commitment = new Commitment(token.address, amount, nonce, 0);
+            let offchainNullifierHash = await ethers.BigNumber.from(commitment.nullifierHash(api.transactionKeeper.proofGenerationCached));
+            let offchainCommitmentHash = await ethers.BigNumber.from(commitment.commitmentHash(api.transactionKeeper.proofGenerationCached));
 
-            let [ onchainCommitmentHash, onchainNullifierHash ] = await node._commitment(token.target, amount, nonce, 0);
+            let [ onchainCommitmentHash, onchainNullifierHash ] = await node._commitment(token.address, amount, nonce, 0);
 
-            expect(offchainNullifierHash).to.equal(onchainNullifierHash);
-            expect(offchainCommitmentHash).to.equal(onchainCommitmentHash);
+            let nullifiersEqual = offchainNullifierHash.eq(onchainNullifierHash);
+            let commitmentsEqual = offchainCommitmentHash.eq(onchainCommitmentHash);
+
+            expect(nullifiersEqual).to.equal(true);
+            expect(commitmentsEqual).to.equal(true);
         };
 
         await check(0, 0);
@@ -72,11 +83,14 @@ describe.only("JS API tests", function () {
     it("hash contracts - offchain constant tests", async function() {
         let check = async function(target, amount, nonce, expectedNullifierHash, expectedCommitmentHash) {
             let commitment = new Commitment(target, amount, nonce);
-            let nullifierHash = await ethers.toBigInt(commitment.nullifierHash(api.transactionKeeper.proofGenerationCached));
-            let commitmentHash = await ethers.toBigInt(commitment.commitmentHash(api.transactionKeeper.proofGenerationCached));
+            let nullifierHash = await ethers.BigNumber.from(commitment.nullifierHash(api.transactionKeeper.proofGenerationCached));
+            let commitmentHash = await ethers.BigNumber.from(commitment.commitmentHash(api.transactionKeeper.proofGenerationCached));
+            
+            let nullifiersEqual = nullifierHash.eq(ethers.BigNumber.from(expectedNullifierHash));
+            let commitmentsEqual = commitmentHash.eq(ethers.BigNumber.from(expectedCommitmentHash));
 
-            expect(nullifierHash).to.equal(ethers.toBigInt(expectedNullifierHash));
-            expect(commitmentHash).to.equal(ethers.toBigInt(expectedCommitmentHash));
+            expect(nullifiersEqual).to.equal(true);
+            expect(commitmentsEqual).to.equal(true);
         };
         
         // if these fail, the poseidon hash function is broken somehow
@@ -92,10 +106,10 @@ describe.only("JS API tests", function () {
         let nonce = 1234;
 
         await token.mint(owner.address, amount);
-        await token.approve(node.target, amount);
+        await token.approve(node.address, amount);
         expect(await token.balanceOf(owner.address)).to.equal(amount);
 
-        const result = await api.lock(token.target, amount, nonce);
+        const result = await api.lock(token.address, amount, nonce);
         expect(await token.balanceOf(owner.address)).to.equal(0);
     }).timeout(1000000);*/
 
@@ -105,10 +119,10 @@ describe.only("JS API tests", function () {
         let nonce = 1234;
 
         await token.mint(owner.address, amount);
-        await token.approve(node.target, amount);
+        await token.approve(node.address, amount);
         expect(await token.balanceOf(owner.address)).to.equal(amount);
 
-        const lockResult = await api.lock(token.target, amount, nonce);
+        const lockResult = await api.lock(token.address, amount, nonce);
         expect(await token.balanceOf(owner.address)).to.equal(0);
 
         const unlockResult = await api.unlock(
@@ -129,11 +143,11 @@ describe.only("JS API tests", function () {
         let remainderNonce = 1338;
 
         await token.mint(owner.address, amount);
-        await token.approve(node.target, amount);
-        expect(await token.balanceOf(owner.address)).to.equal(amount);
+        await token.approve(node.address, amount);
+        await expectBalance(token, owner.address, amount);
 
-        const lockResult = await api.lock(token.target, amount, nonce);
-        expect(await token.balanceOf(owner.address)).to.equal(0);
+        const lockResult = await api.lock(token.address, amount, nonce);
+        await expectBalance(token, owner.address, 0);
 
         const transferResult = await api.transferUnowned(transferAmount, payoutNonce, remainderNonce, lockResult.storage.inserted);
 
@@ -142,7 +156,7 @@ describe.only("JS API tests", function () {
             0, // remainder nonce
             [transferResult.storage.inserted[0]]
         );
-        expect(await token.balanceOf(owner.address)).to.equal(transferAmount);
+        await expectBalance(token, owner.address, transferAmount);
 
         // unlock remaining amount
         const unlockResult2 = await api.unlock(
@@ -150,7 +164,7 @@ describe.only("JS API tests", function () {
             0, // remainder nonce
             [transferResult.storage.inserted[1]]
         );
-        expect(await token.balanceOf(owner.address)).to.equal(amount);
+        await expectBalance(token, owner.address, amount);
     }).timeout(1000000);
     
 
@@ -164,10 +178,10 @@ describe.only("JS API tests", function () {
         let remainderNonce = 1338;
 
         await token.mint(owner.address, amount);
-        await token.approve(node.target, amount);
+        await token.approve(node.address, amount);
         expect(await token.balanceOf(owner.address)).to.equal(amount);
 
-        const lockResult = await api.lock(token.target, amount, nonce);
+        const lockResult = await api.lock(token.address, amount, nonce);
         expect(await token.balanceOf(owner.address)).to.equal(0);
 
         const transferResult = await api.transfer(transferAmount, payoutNonce, owner.address, remainderNonce, lockResult.storage.inserted);
