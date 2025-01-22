@@ -1,0 +1,7 @@
+*.ptau
+*.zkey
+*.sym
+*.json
+*.sol
+*.r1cs
+circuit_js

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0
 pragma solidity ^0.8.27;
 
 import { TransactionKeeper, ProofCommitment } from "./TransactionKeeper.sol";
@@ -7,9 +8,9 @@ contract ZKERC20 is IZKERC20, TransactionKeeper {
     address public immutable node;
     uint256 public constant DEFAULT_SECRET = 0;
 
-    event Mint(address indexed asset, address indexed to, uint256 amount);
+    event Mint(address indexed asset, uint256 amount);
     event Mint();
-    event Burn(address indexed asset, address indexed from, uint256 amount);
+    event Burn(address indexed asset, uint256 amount);
     event Transfer();
 
     modifier onlyNode() {
@@ -17,7 +18,7 @@ contract ZKERC20 is IZKERC20, TransactionKeeper {
         _;
     }
 
-    constructor(address _contracts) TransactionKeeper(_contracts) {
+    constructor(address _poseidon2, address _poseidon3, address _mimcSponge) TransactionKeeper(_poseidon2, _poseidon3, _mimcSponge) {
         node = msg.sender;
     }
 
@@ -28,16 +29,16 @@ contract ZKERC20 is IZKERC20, TransactionKeeper {
 
     function _mint(
         address asset,
-        address to,
         uint256 amount,
-        uint256 salt
+        uint256 commitment,
+        ProofCommitment memory proof
     ) external onlyNode returns (uint256) {
-        emit Mint(asset, to, amount);
+        emit Mint(asset, amount);
         return TransactionKeeper.insert(
-            to,
             asset,
             amount,
-            salt
+            commitment,
+            proof
         );
     }
 
@@ -49,20 +50,18 @@ contract ZKERC20 is IZKERC20, TransactionKeeper {
 
 
     function _burn(
+        address sender,
         address asset,
-        address from,
         uint256 amount,
-        uint256 salt,
         uint256 remainderCommitment,
         uint256[8] memory nullifier,
         ProofCommitment memory proof
     ) external onlyNode returns (uint256) {
-        emit Burn(asset, from, amount);
+        emit Burn(asset, amount);
         return TransactionKeeper.drop(
-            from,
+            sender,
             asset,
             amount,
-            salt,
             remainderCommitment,
             nullifier,
             proof
@@ -71,16 +70,17 @@ contract ZKERC20 is IZKERC20, TransactionKeeper {
 
 
     function _bridge(
-        uint256 leftCommitment,
-        uint256 rightCommitment,
+        address sender,
+        uint256 localCommitment,
+        uint256 remoteCommitment,
         uint256[8] memory nullifier,
         ProofCommitment memory proof
-    ) external override onlyNode returns (uint256, uint256) {
+    ) external override onlyNode returns (uint256) {
         emit Transfer();
         return TransactionKeeper.bridge(
-            msg.sender, // TODO: current limitation: we must reveal the sender here. Client must bundle with transferFrom
-            leftCommitment,
-            rightCommitment,
+            sender,
+            localCommitment,
+            remoteCommitment,
             nullifier,
             proof
         );
@@ -92,7 +92,6 @@ contract ZKERC20 is IZKERC20, TransactionKeeper {
 
 
     function transferFrom(
-        address spender, // TODO: don't want to reveal this?
         uint256 payoutCommitment,
         uint256 remainderCommitment,
         uint256[8] memory nullifier,
@@ -100,7 +99,7 @@ contract ZKERC20 is IZKERC20, TransactionKeeper {
     ) external returns (uint256 payoutIndex, uint256 remainderIndex) {
         emit Transfer();
         return TransactionKeeper.split(
-            spender,
+            msg.sender,
             payoutCommitment,
             remainderCommitment,
             nullifier,
@@ -114,7 +113,7 @@ contract ZKERC20 is IZKERC20, TransactionKeeper {
 
 
     function name() public pure returns (string memory) {
-        return "zkERC20";
+        return "ZKERC20";
     }
     function symbol() public pure returns (string memory) {
         return "ZKERC20";
@@ -125,10 +124,10 @@ contract ZKERC20 is IZKERC20, TransactionKeeper {
     function totalSupply() public pure returns (uint256) {
         revert("ZKERC20: totalSupply not supported");
     }
-    function balanceOf(address account) public pure returns (uint256) {
+    function balanceOf(address /*account*/) public pure returns (uint256) {
         revert("ZKERC20: balanceOf not supported");
     }
-    function allowance(address owner, address spender) public pure returns (uint256) {
+    function allowance(address /*owner*/, address /*spender*/) public pure returns (uint256) {
         revert("ZKERC20: allowance not supported");
     }
 }

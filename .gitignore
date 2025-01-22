@@ -15,5 +15,13 @@ out/
 node_modules
 package_lock.json
 
-circuits/final.ptau
 artifacts/
+
+package-lock.json
+
+flake.lock
+flake.nix
+
+foundry-bin/
+
+brainstorming*

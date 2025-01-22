@@ -1,8 +1,10 @@
+// SPDX-License-Identifier: GPL-3.0
 pragma solidity ^0.8.27;
 
 import { Bridge } from "./Bridge.sol";
-import { OApp, Origin, MessagingFee } from "@layerzerolabs/lz-evm-oapp-v2/contracts/oapp/OApp.sol";
-import { OptionsBuilder } from "@layerzerolabs/lz-evm-oapp-v2/contracts/oapp/libs/OptionsBuilder.sol";
+import { OApp, Origin, MessagingFee } from "@layerzerolabs/oapp-evm/contracts/oapp/OApp.sol";
+import { OptionsBuilder } from "@layerzerolabs/oapp-evm/contracts/oapp/libs/OptionsBuilder.sol";
+import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 
 contract LZBridge is Bridge, OApp {
     using OptionsBuilder for bytes;
@@ -11,7 +13,7 @@ contract LZBridge is Bridge, OApp {
     mapping(uint32 => uint256) public eidToChainId;
 
     constructor(address _deployer, address _manager, address _endpoint)
-        Bridge(_manager) OApp(_endpoint, _deployer) {}
+        Bridge(_manager) OApp(_endpoint, _deployer) Ownable(_deployer) {}
 
 
     function _sendMessage(address refundAddress, uint256 destChainId, bytes memory data) internal override {
@@ -40,10 +42,10 @@ contract LZBridge is Bridge, OApp {
 
     function _lzReceive(
         Origin calldata _origin,
-        bytes32 _guid,
+        bytes32 /*_guid*/,
         bytes calldata payload,
-        address _executor,
-        bytes calldata _extraData
+        address /*_executor*/,
+        bytes calldata /*_extraData*/
     ) internal override {
         receiveMessage(eidToChainId[_origin.srcEid], payload);
     }

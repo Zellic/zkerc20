@@ -10,7 +10,7 @@ For more information about the privacy guarantees of the protocol, see [`docs/MO
 
 # How it works
 
-Our protocol uses completely custom zero knowledge circuits, which allows the privacy-preserving guarantees without dependent on specialized ecosystem features. This allows the application to trivially be expanded across EVM-compatible chains, and even others like Aptos.
+Our protocol uses completely custom zero knowledge circuits, which allows the privacy-preserving guarantees without dependent on specialized ecosystem features. This allows the application to be trivially expanded across EVM-compatible chains, and even others like Aptos.
 
 Users interact with the protocol by providing proofs of certain invariants. These are produced off-chain. We provide a number of options: they can be computed directly in the browser using WebAssembly, or even by a self-hosted server implementation.
 
