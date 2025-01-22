@@ -28,6 +28,7 @@
     "@nomiclabs/hardhat-ethers": "^2.2.3",
     "@openzeppelin/contracts": "^5.2.0",
     "@openzeppelin/contracts-upgradeable": "^5.2.0",
+    "big-integer": "^1.6.52",
     "circomlib": "^2.0.5",
     "circomlibjs": "^0.0.8",
     "hardhat": "^2.22.18",
