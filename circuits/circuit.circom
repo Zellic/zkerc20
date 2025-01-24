@@ -3,72 +3,11 @@
 pragma circom 2.1.9;
 
 include "../node_modules/circomlib/circuits/bitify.circom";
-include "../node_modules/circomlib/circuits/mimcsponge.circom";
-include "../node_modules/circomlib/circuits/poseidon.circom";
 include "../node_modules/circomlib/circuits/comparators.circom";
 
-template HashTwo() {
-    signal input left;
-    signal input right;
-    signal output hash;
+include "merkleroot.circom";
+include "commitment.circom";
 
-    component hasher = MiMCSponge(2, 220, 1);
-    hasher.ins[0] <== left;
-    hasher.ins[1] <== right;
-    hasher.k <== 0;
-    hash <== hasher.outs[0];
-}
-
-template MerkleRoot(MAX_HEIGHT) {
-    signal input value;
-
-    signal input path[MAX_HEIGHT];
-    signal input sides[MAX_HEIGHT];
-
-    signal output root;
-
-    signal hash[MAX_HEIGHT + 1];
-    component hasher[MAX_HEIGHT];
-
-    hash[0] <== value;
-
-    for (var i = 0; i < MAX_HEIGHT; i++) {
-        // the side must be zero or one
-        sides[i] * (1 - sides[i]) === 0;
-
-        // if side is 0, then hash(subtree, path)
-        // otherwise, hash(path, subtree)
-        hasher[i] = HashTwo();
-        hasher[i].left <== (path[i] - hash[i]) * sides[i] + hash[i];
-        hasher[i].right <== (hash[i] - path[i]) * sides[i] + path[i];
-
-        hash[i + 1] <== hasher[i].hash;
-    }
-
-    root <== hash[MAX_HEIGHT];
-}
-
-template Commitment() {
-    signal input asset;
-    signal input amount;
-    signal input salt;
-    signal input owner;
-
-    signal output nullifier;
-    signal output commitment;
-
-    component nullifierHasher = Poseidon(4);
-    nullifierHasher.inputs[0] <== asset;
-    nullifierHasher.inputs[1] <== amount;
-    nullifierHasher.inputs[2] <== salt;
-    nullifierHasher.inputs[3] <== owner;
-    nullifier <== nullifierHasher.out;
-
-    component commitmentHasher = Poseidon(2);
-    commitmentHasher.inputs[0] <== nullifier;
-    commitmentHasher.inputs[1] <== salt;
-    commitment <== commitmentHasher.out;
-}
 
 // TODO: refactor into separate file
 template Split(MAX_HEIGHT, NUM_NOTES) {
