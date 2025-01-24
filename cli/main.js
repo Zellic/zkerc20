@@ -138,7 +138,6 @@ program
 ////////// MAIN
 
 
-// Parse arguments
 program.parse(process.argv);
 
 // Display help if no subcommand is provided
