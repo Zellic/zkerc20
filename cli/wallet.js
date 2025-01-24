@@ -1,27 +1,35 @@
-class RPC {
-    constructor(ethers) {
-        this.ethers = ethers;
-        this.cacheFile = '/tmp/zkerc20RPC';
-    }
+const ethers = require('ethers');
 
-    async queryEventsSince(query, timestamp) {}
-}
+const {
+    RPC,
+    CachedRPC
+} = require('./rpc.js');
 
 
-class CachedRPC extends RPC {
-    // TODO
+const {
+    NoChainSelectedError,
+    InvalidConfigError
+} = require('./errors.js');
 
-    async queryEvents(query) {}
-}
+const {
+    ConnectedNode
+} = require('../lib/api.js');
 
 
 class ZKERC20Wallet extends ConnectedNode {
-    constructor(configFilepath, accountFilepath) {
-        // open and read the config file
-        const config = JSON.parse(fs.readFileSync(configFilepath));
-        const account = JSON.parse(fs.readFileSync(accountFilepath));
-        this.config = config;
-        this.account = account;
+    constructor(fullConfig, chainSelectionOverride) {
+        // get chain config from the config file
+        let chainSelection = chainSelectionOverride;
+        if (!chainSelection) {
+            if (fullConfig.defaultChain === null) {
+                throw new NoChainSelectedError();
+            }
+            chainSelection = fullConfig.defaultChain;
+        }
+        const config = fullConfig.chains[chainSelection];
+        if (config === undefined) {
+            throw new InvalidConfigError(`Selected chain "${config.defaultChain}" not found in config file.`);
+        }
 
         // import contract addresses from config
         const nodeContract = config.nodeContract;
@@ -32,6 +40,9 @@ class ZKERC20Wallet extends ConnectedNode {
         const signer = ethers.getSigner(account);
 
         super(ethers, signer, nodeContract, zkerc20Contract);
+
+        this.config = config;
+        this.fullConfig = fullConfig;
     }
 
     //////
@@ -59,3 +70,7 @@ class ZKERC20Wallet extends ConnectedNode {
     async _submitTransaction(tx) {}
 }
 
+
+module.exports = {
+    ZKERC20Wallet
+};
