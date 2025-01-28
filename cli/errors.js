@@ -19,6 +19,8 @@ class NoChainSelectedError extends CustomError {
 
 
 module.exports = {
+    CustomError,
+
     InvalidConfigError,
     NoChainSelectedError
 };

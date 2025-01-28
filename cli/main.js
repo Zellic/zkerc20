@@ -6,6 +6,8 @@ const { Command } = require('commander');
 const { defaultConfigPath, readConfig } = require('./config');
 const { ZKERC20Wallet } = require('./wallet');
 
+const { CustomError } = require('./errors');
+
 let OPT_VERBOSE = process.env.VERBOSE || false;
 
 const program = new Command();
@@ -41,7 +43,7 @@ let handler = (fn) => {
             // show full error stack if verbose
             // or, if Error and not a custom error.
             // otherwise just show the error message
-            if (OPT_VERBOSE || err.name === 'Error') {
+            if (OPT_VERBOSE || !(err instanceof CustomError)) {
                 console.error(err);
             } else {
                 console.error('Error:', err.message);
