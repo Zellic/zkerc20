@@ -16,19 +16,6 @@ struct ProofCommitment {
 }
 
 contract TransactionKeeper is MerkleTree(30) {
-    event Transaction (
-        uint256 commitment,
-        uint256 index
-    );
-
-    event PublicTransaction (
-        uint256 commitment,
-        uint256 index,
-
-        address asset,
-        uint256 amount
-    );
-
     event Nullified (
         uint256 nullifier
     );
@@ -215,9 +202,6 @@ contract TransactionKeeper is MerkleTree(30) {
 
         leftIndex = _insert(leftCommitment);
         rightIndex = _insert(rightCommitment);
-
-        emit Transaction(leftCommitment, leftIndex);
-        emit Transaction(rightCommitment, rightIndex);
     }
 
 
@@ -240,8 +224,6 @@ contract TransactionKeeper is MerkleTree(30) {
         );
 
         localIndex = _insert(localCommitment);
-
-        emit Transaction(localCommitment, localIndex);
     }
 
 
@@ -274,13 +256,6 @@ contract TransactionKeeper is MerkleTree(30) {
         );
 
         rightIndex = _insert(rightCommitment);
-
-        emit PublicTransaction (
-            rightCommitment,
-            rightIndex,
-            asset,
-            amount
-        );
     }
 
 
@@ -304,13 +279,6 @@ contract TransactionKeeper is MerkleTree(30) {
         );
 
         index = _insert(leftCommitment);
-
-        emit PublicTransaction (
-            leftCommitment,
-            index,
-            asset,
-            amount
-        );
     }
 
 
@@ -318,7 +286,6 @@ contract TransactionKeeper is MerkleTree(30) {
         uint256 commitment
     ) internal returns (uint256 index) {
         index = _insert(commitment);
-        emit Transaction(commitment, index);
     }
 
 

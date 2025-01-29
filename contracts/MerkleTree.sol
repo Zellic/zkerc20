@@ -2,12 +2,16 @@
 pragma solidity ^0.8.27;
 
 abstract contract MerkleTree {
-    uint8 public targetHeight;
+    event Inserted(
+        uint256 commitment,
+        uint256 index
+    );
+
+    uint8 public immutable targetHeight;
+
     uint256 public root = 0;
     uint64 public transactions = 0;
-
     mapping(uint64 => uint256) public pastRoots;
-
     mapping(uint256 => uint256) public filledSubtrees; // https://www.zellic.io/blog/how-does-tornado-cash-work/#setup
 
     constructor(uint8 _targetHeight) {
@@ -40,8 +44,9 @@ abstract contract MerkleTree {
         root = current;
         pastRoots[transactions] = root;
         position = transactions;
-
         transactions++;
+
+        emit Inserted(value, position);
     }
 
 
