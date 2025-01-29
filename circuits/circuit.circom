@@ -59,6 +59,10 @@ template Split(MAX_HEIGHT, NUM_NOTES) {
 
         // either owner is 0 (salt only auth)
         // or owner is the sender (owner+salt auth)
+        // NOTE: this check allows any salt to pass if owner==owner. This is 
+        //   not a problem thanks to the merkle tree inclusion requirement. At
+        //   first I was concerned that the nullifier could be changed to 
+        //   redeem the note multiple times.
         commitments[i].owner * (sender - commitments[i].owner) === 0;
 
         // check that the commitment is not from the burn salt (0)
