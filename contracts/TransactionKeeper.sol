@@ -188,7 +188,7 @@ contract TransactionKeeper is MerkleTree(30) {
         uint256 rightCommitment,
         uint256[8] memory nullifiers,
         ProofCommitment memory proof
-    ) internal returns (uint256 leftIndex, uint256 rightIndex) {
+    ) internal returns (uint64 leftIndex, uint64 rightIndex) {
         require(
             _checkProof(
                 sender,
@@ -211,7 +211,7 @@ contract TransactionKeeper is MerkleTree(30) {
         uint256 remoteCommitment, // left commitment
         uint256[8] memory nullifiers,
         ProofCommitment memory proof
-    ) internal returns (uint256 localIndex) {
+    ) internal returns (uint64 localIndex) {
         require(
             _checkProof(
                 sender,
@@ -236,7 +236,7 @@ contract TransactionKeeper is MerkleTree(30) {
         uint256 rightCommitment,
         uint256[8] memory nullifiers,
         ProofCommitment memory proof
-    ) internal returns (uint256 rightIndex) {
+    ) internal returns (uint64 rightIndex) {
         (uint256 leftCommitment,) = _commitment(
             uint256(uint160(asset)),
             uint256(amount),
@@ -266,7 +266,7 @@ contract TransactionKeeper is MerkleTree(30) {
         uint256 amount,
         uint256 leftCommitment,
         ProofCommitment memory proof
-    ) internal returns (uint256 index) {
+    ) internal returns (uint64 index) {
         require(
             // deals with the fake insertion
             _verifyInsertProof(
@@ -284,7 +284,7 @@ contract TransactionKeeper is MerkleTree(30) {
 
     function insert(
         uint256 commitment
-    ) internal returns (uint256 index) {
+    ) internal returns (uint64 index) {
         index = _insert(commitment);
     }
 

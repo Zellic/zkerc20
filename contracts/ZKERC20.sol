@@ -9,7 +9,6 @@ contract ZKERC20 is IZKERC20, TransactionKeeper {
     uint256 public constant DEFAULT_SECRET = 0;
 
     event Mint(address indexed asset, uint256 amount);
-    event Mint();
     event Burn(address indexed asset, uint256 amount);
     event Transfer();
 
@@ -32,7 +31,7 @@ contract ZKERC20 is IZKERC20, TransactionKeeper {
         uint256 amount,
         uint256 commitment,
         ProofCommitment memory proof
-    ) external onlyNode returns (uint256) {
+    ) external onlyNode returns (uint64) {
         emit Mint(asset, amount);
         return TransactionKeeper.insert(
             asset,
@@ -43,8 +42,8 @@ contract ZKERC20 is IZKERC20, TransactionKeeper {
     }
 
 
-    function _mint(uint256 commitment) external onlyNode returns (uint256) {
-        emit Mint();
+    function _mint(uint256 commitment) external onlyNode returns (uint64) {
+        emit Mint(address(0), 0);
         return TransactionKeeper.insert(commitment);
     }
 
@@ -56,7 +55,7 @@ contract ZKERC20 is IZKERC20, TransactionKeeper {
         uint256 remainderCommitment,
         uint256[8] memory nullifier,
         ProofCommitment memory proof
-    ) external onlyNode returns (uint256) {
+    ) external onlyNode returns (uint64) {
         emit Burn(asset, amount);
         return TransactionKeeper.drop(
             sender,
@@ -75,7 +74,7 @@ contract ZKERC20 is IZKERC20, TransactionKeeper {
         uint256 remoteCommitment,
         uint256[8] memory nullifier,
         ProofCommitment memory proof
-    ) external override onlyNode returns (uint256) {
+    ) external override onlyNode returns (uint64) {
         emit Transfer();
         return TransactionKeeper.bridge(
             sender,
@@ -96,7 +95,7 @@ contract ZKERC20 is IZKERC20, TransactionKeeper {
         uint256 remainderCommitment,
         uint256[8] memory nullifier,
         ProofCommitment memory proof
-    ) external returns (uint256 payoutIndex, uint256 remainderIndex) {
+    ) external returns (uint64 payoutIndex, uint64 remainderIndex) {
         emit Transfer();
         return TransactionKeeper.split(
             msg.sender,
