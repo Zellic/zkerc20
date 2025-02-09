@@ -9,10 +9,10 @@ Of course, we have to separate pieces of data per UTXO: the commitment (defines 
 
 ```
 commitment = hash(nullifier | salt)
-nullifier = hash(asset | amount | salt)
+nullifier = hash(asset | amount | salt | owner)
 ```
 
-That is, *commitment* is `hash(hash(asset | amount | salt) | salt)`. While this may seem odd to have the salt twice, it is actually necessary for privacy preserving purposes.
+That is, *commitment* is `hash(hash(asset | amount | salt | owner) | salt)`. While this may seem odd to have the salt twice, it is actually necessary for privacy preserving purposes.
 
 If the commitment and nullifier were identical, or anyone could easily calculate one given the other, then it would be possible to associate transferring/burning (i.e., spending a commitment by submitting the nullifier on-chain) with the original deposit transaction, thereby revealing the depositor. So, we must include the salt in the calculation of the commitment.
 

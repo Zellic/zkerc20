@@ -82,7 +82,14 @@ program
     .description('Show balance of account')
     .action(handler(async (opts, config) => {
         let wallet = _createWallet(opts, config);
-        console.log('Balance functionality not implemented.');
+        let notes = await wallet.getUserNotes()
+            .filter(note => !note.nullified);
+
+
+
+        let balance = notes
+            .reduce((total, note) => total + note.amount, 0);
+        console.log(balance)
     }));
 
 // list
