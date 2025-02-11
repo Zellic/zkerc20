@@ -1,5 +1,9 @@
 const { ethers } = require('ethers');
 
+
+const { generateSalt } = require('./salt.js');
+
+
 const {
     RPC,
     CachedRPC
@@ -10,6 +14,7 @@ const {
     NoChainSelectedError,
     InvalidConfigError
 } = require('./errors.js');
+
 
 const {
     ConnectedNode
@@ -76,6 +81,7 @@ class ZKERC20Wallet extends ConnectedNode {
         let notes = new Set();
 
         let allNotes = await this._getAllNotes();
+        console.log('allNotes', allNotes)
 /*
         allNotes.forEach(note => {
             if 
@@ -122,6 +128,22 @@ class ZKERC20Wallet extends ConnectedNode {
     //////
 
     async _submitTransaction(tx) {}
+
+    //////
+
+    async balance() {
+        let notes = (await this.getUserNotes())
+            .filter(note => !note.nullified);
+
+        let balance = notes
+            .reduce((total, note) => total + note.amount, 0);
+        return balance;       
+    }
+
+    async lock(token, amount) {
+        let salt = await generateSalt();
+        return await super.lock(token, amount, salt);
+    }
 }
 
 
