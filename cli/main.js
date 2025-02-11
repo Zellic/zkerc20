@@ -6,6 +6,8 @@ const { Command } = require('commander');
 const { defaultConfigPath, readConfig } = require('./config');
 const { ZKERC20Wallet } = require('./wallet');
 
+const { CustomError } = require('./errors');
+
 let OPT_VERBOSE = process.env.VERBOSE || false;
 
 const program = new Command();
@@ -41,7 +43,7 @@ let handler = (fn) => {
             // show full error stack if verbose
             // or, if Error and not a custom error.
             // otherwise just show the error message
-            if (OPT_VERBOSE || err.name === 'Error') {
+            if (OPT_VERBOSE || !(err instanceof CustomError)) {
                 console.error(err);
             } else {
                 console.error('Error:', err.message);
@@ -53,8 +55,20 @@ let handler = (fn) => {
 };
 
 
-let _createWallet = (opts, config) => {
-    return new ZKERC20Wallet(config, opts.chain);
+async function _createWallet(opts, config) {
+    const wallet = new ZKERC20Wallet(config, opts.chain);
+    await wallet.initialize(
+        // getLatestLeaves
+        //() => {},
+        null,
+
+        // getSender
+        () => {
+            return wallet.account.address;
+        }
+    );
+    console.log(`Using wallet ${wallet.account.address}...`)
+    return wallet;
 }
 
 
@@ -79,8 +93,9 @@ program
     .command('balance')
     .description('Show balance of account')
     .action(handler(async (opts, config) => {
-        let wallet = _createWallet(opts, config);
-        console.log('Balance functionality not implemented.');
+        let wallet = await _createWallet(opts, config);
+        const balance = await wallet.balance();
+        console.log('Balance:', balance)
     }));
 
 // list
@@ -88,7 +103,7 @@ program
     .command('list')
     .description('List available ZKERC20 tokens')
     .action(handler(async (opts, config) => {
-        let wallet = _createWallet(opts, config);
+        let wallet = await _createWallet(opts, config);
         console.log('List functionality not implemented.');
     }));
 
@@ -100,8 +115,14 @@ program
     .alias('mint')
     .description('Lock ERC-20 tokens into the contract')
     .action(handler(async (opts, config) => {
-        let wallet = _createWallet(opts, config);
-        console.log('Lock functionality not implemented.');
+        let wallet = await _createWallet(opts, config);
+
+        // TODO
+        let token = '0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512';
+        let amount = 100000;
+
+        const result = await wallet.lock(token, amount);
+        console.log('lock result', result)
     }));
 
 // unlock
@@ -112,7 +133,7 @@ program
     .alias('redeem')
     .description('Unlock ERC-20 tokens from the contract')
     .action(handler(async (opts, config) => {
-        let wallet = _createWallet(opts, config);
+        let wallet = await _createWallet(opts, config);
         console.log('Unlock functionality not implemented.');
     }));
 
@@ -121,7 +142,7 @@ program
     .command('transfer')
     .description('Transfer ZKERC20 notes')
     .action(handler(async (opts, config) => {
-        let wallet = _createWallet(opts, config);
+        let wallet = await _createWallet(opts, config);
         console.log('Transfer functionality not implemented.');
     }));
 
@@ -130,7 +151,7 @@ program
     .command('bridge')
     .description('Bridge ZKERC20 notes')
     .action(handler(async (opts, config) => {
-        let wallet = _createWallet(opts, config);
+        let wallet = await _createWallet(opts, config);
         console.log('Bridge functionality not implemented.');
     }));
 
@@ -138,7 +159,6 @@ program
 ////////// MAIN
 
 
-// Parse arguments
 program.parse(process.argv);
 
 // Display help if no subcommand is provided

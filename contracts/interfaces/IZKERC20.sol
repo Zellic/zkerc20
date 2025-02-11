@@ -9,11 +9,11 @@ interface IZKERC20 {
         uint256 amount,
         uint256 commitment,
         ProofCommitment memory proof
-    ) external returns (uint256);
+    ) external returns (uint64);
     
     function _mint(
         uint256 commitment
-    ) external returns (uint256);
+    ) external returns (uint64);
 
     function _burn(
         address sender,
@@ -22,7 +22,7 @@ interface IZKERC20 {
         uint256 remainderCommitment,
         uint256[8] memory nullifier,
         ProofCommitment memory proof
-    ) external returns (uint256);
+    ) external returns (uint64);
         
     function _bridge(
         address sender,
@@ -30,12 +30,12 @@ interface IZKERC20 {
         uint256 rightCommitment,
         uint256[8] memory nullifier,
         ProofCommitment memory proof
-    ) external returns (uint256 index);
+    ) external returns (uint64 index);
 
     function transferFrom(
         uint256 payoutCommitment,
         uint256 remainderCommitment,
         uint256[8] memory nullifier,
         ProofCommitment memory proof
-    ) external returns (uint256 payoutIndex, uint256 remainderIndex);
+    ) external returns (uint64 payoutIndex, uint64 remainderIndex);
 }

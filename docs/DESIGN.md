@@ -9,10 +9,10 @@ Of course, we have to separate pieces of data per UTXO: the commitment (defines 
 
 ```
 commitment = hash(nullifier | salt)
-nullifier = hash(asset | amount | salt)
+nullifier = hash(asset | amount | salt | owner)
 ```
 
-That is, *commitment* is `hash(hash(asset | amount | salt) | salt)`. While this may seem odd to have the salt twice, it is actually necessary for privacy preserving purposes.
+That is, *commitment* is `hash(hash(asset | amount | salt | owner) | salt)`. While this may seem odd to have the salt twice, it is actually necessary for privacy preserving purposes.
 
 If the commitment and nullifier were identical, or anyone could easily calculate one given the other, then it would be possible to associate transferring/burning (i.e., spending a commitment by submitting the nullifier on-chain) with the original deposit transaction, thereby revealing the depositor. So, we must include the salt in the calculation of the commitment.
 
@@ -33,4 +33,14 @@ An alternative design choice is to have a "master" commitment that gets split/nu
 ## Why do we pick random salt even for input commitments with no value?
 
 When transferring or bridging, the commitments with a zero amount always use securely random numbers. The reasoning is that if the salt and amount are known, then the asset can be deduced. To prevent privacy leaks, we must use random salts for all commitments.
+
+
+## What is the purpose of having both auth by ownership and secret?
+
+When a user transfers a note to a program (for example), they need to be able to provably revoke their ability to use that note in the future.
+
+Since the salt (i.e., remainder salt) would be known to the user when splitting, a program would have to "finalize" the transfer by splitting again, and waiting for enough confirmations on-chain. Forcing programs to implement measures to ensure transfers are properly finalized on-chain seems risky, complicated for developers, and unwise. We don't want to require this, so we allow the user to revoke their ability to use the note.
+
+Of course, the user will be able to leak privacy of the program when the program first uses the note, so we still recommend that the program "finalizes" the transfer by simply changing the salt. We prefer this potential, relatively small privacy leak over the aforementioned security risk.
+
 

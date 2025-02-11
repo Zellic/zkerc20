@@ -59,11 +59,13 @@ template Split(MAX_HEIGHT, NUM_NOTES) {
 
         // either owner is 0 (salt only auth)
         // or owner is the sender (owner+salt auth)
+        // NOTE: salt check occurs next
         commitments[i].owner * (sender - commitments[i].owner) === 0;
 
         // check that the commitment is not from the burn salt (0)
-        // NOTE: technically a 0 salt should never be inserted in the 
+        // NOTE: technically a 0 salt should never be inserted in the
         //   in-contract state. This is just a sanity check.
+        // NOTE: this check always occurs, regardless of note ownership
         saltCheck[i] = IsZero();
         saltCheck[i].in <== commitments[i].salt;
         saltCheck[i].out === 0; // 0 is false

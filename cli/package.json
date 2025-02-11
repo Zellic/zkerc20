@@ -1,0 +1,15 @@
+{
+  "name": "cli",
+  "version": "0.1.0",
+  "description": "CLI for ZKERC20",
+  "license": "GPL-3.0",
+  "author": "Zellic",
+  "type": "commonjs",
+  "main": "main.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "ethers": "^5.7.2"
+  }
+}

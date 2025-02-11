@@ -35,7 +35,7 @@ contract Node is BridgeManager {
         uint256 amount,
         uint256 commitment,
         ProofCommitment memory proof
-    ) external returns (uint256 index) {
+    ) external returns (uint64 index) {
         // take the user's original ERC20 tokens
         address originalToken = wrappedToNative[token];
         if (originalToken != address(0)) {
@@ -80,7 +80,7 @@ contract Node is BridgeManager {
         uint256 remainderCommitment,
         uint256[8] memory nullifier,
         ProofCommitment memory proof
-    ) external returns (uint256 rightIndex) {
+    ) external returns (uint64 rightIndex) {
         rightIndex = zkerc20._burn(
             msg.sender,
             token,

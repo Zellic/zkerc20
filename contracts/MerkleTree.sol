@@ -2,12 +2,16 @@
 pragma solidity ^0.8.27;
 
 abstract contract MerkleTree {
-    uint8 public targetHeight;
+    event Inserted(
+        uint256 commitment,
+        uint64 index
+    );
+
+    uint8 public immutable targetHeight;
+
     uint256 public root = 0;
     uint64 public transactions = 0;
-
-    mapping(uint64 => uint256) public pastRoots;
-
+    mapping(uint64 => uint256) public pastRoots; // TODO
     mapping(uint256 => uint256) public filledSubtrees; // https://www.zellic.io/blog/how-does-tornado-cash-work/#setup
 
     constructor(uint8 _targetHeight) {
@@ -21,10 +25,10 @@ abstract contract MerkleTree {
     }
 
 
-    function _insert(uint256 value) public returns (uint256 position) {
+    function _insert(uint256 value) public returns (uint64 position) {
         require(transactions < 2**targetHeight, "Tree is full");
 
-        uint256 index = transactions;
+        uint64 index = transactions;
 
         uint256 current = value;
         for (uint256 i = 0; i < targetHeight; i++) {
@@ -40,15 +44,16 @@ abstract contract MerkleTree {
         root = current;
         pastRoots[transactions] = root;
         position = transactions;
-
         transactions++;
+
+        emit Inserted(value, position);
     }
 
 
     function verifyProof(
         uint256 tree,
         uint256 value,
-        uint256 index,
+        uint64 index,
         uint256[] memory proof
     ) public view {
         uint256 current = value;
