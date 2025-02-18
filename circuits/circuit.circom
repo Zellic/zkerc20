@@ -9,7 +9,6 @@ include "merkleroot.circom";
 include "commitment.circom";
 
 
-// TODO: refactor into separate file
 template Split(MAX_HEIGHT, NUM_NOTES) {
     // NUM_NOTES in
     signal input sender;
