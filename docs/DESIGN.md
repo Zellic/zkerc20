@@ -34,3 +34,19 @@ An alternative design choice is to have a "master" commitment that gets split/nu
 
 When transferring or bridging, the commitments with a zero amount always use securely random numbers. The reasoning is that if the salt and amount are known, then the asset can be deduced. To prevent privacy leaks, we must use random salts for all commitments.
 
+
+## Why are there two modes of transfer?
+
+When transferring (i.e., splitting) a note to a different user, the sender must provide at least one output commitment. Of course, calculating this commitment hash requires the salt, which is secret. If the receiver simply provided the sender with a salt to use, then the sender could "take back" (spend) the note until the receiver splits the note again to change the salt.
+
+This could be done atomically, where the receiver provides the sender with the details/proof for a second split to bundle that changes the salt immediately after the first split, in one transaction.
+
+While this is acceptable, we want to provide the ability for users to atomically revoke their ability to spend a note, without requiring a communication from the receiver. So, we provide two modes of authentication on notes: by salt or ownership:
+
+- **Salt**: The user knows the salt, and can spend the note by revealing the nullifier.
+- **Salt+Ownership**: If the note has an owner defined (i.e. is non-zero in the commitment), then the `msg.sender` must also match the owner, in addition to the salt.
+
+The second mode allows a sender to revoke their ability to spend a note after transferring it without requiring communication from the receiver.
+
+Note that the salt would still be known to the sender after splitting, so the receiver must split the note and change the salt to preserve privacy on the next transaction; otherwise, since the nullifier is known to the original sender, privacy on the second transaction would be leaked when the nullifier is burned. We recommend that the receiver splits the note immediately after receiving it to change the salt.
+
