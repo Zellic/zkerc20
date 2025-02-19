@@ -12,7 +12,9 @@ To install and run tests, in the cloned directory, simply run:
 make test
 ```
 
-# About
+**IMPORTANT DISCLAIMER**: This project is intended to be a proof of concept and is not production ready. Not all features are necessarily fully implemented or tested, and the code has not been audited.
+
+# Make any ERC-20 like Zcash
 
 The protocol consists of a contract on each supported ecosystem, which utilizes zero knowledge proofs (ZKPs) to regulate user balances in a vector commitment. These contracts interact through messages on LayerZero, allowing users to send and bridge assets completely privately and anonymously. In fact, outside observers cannot even determine exactly how a token's supply is spread across the chains.
 
