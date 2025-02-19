@@ -1,5 +1,6 @@
 const { expect } = require("chai");
 const { network } = require("hardhat");
+const { performance } = require('perf_hooks');
 
 const { Node, ConnectedNode, Commitment } = require("../../lib/api");
 const { Setup } = require("../../lib/setup");
@@ -200,4 +201,37 @@ describe.only("JS API tests", function () {
         );
         expect(await token.balanceOf(owner.address)).to.equal(amount);
     }).timeout(1000000);*/
+
+    it("should handle basic operations with caching", async function () {
+        const measurements = [];
+        
+        async function measureOperation(operation, description) {
+            const start = performance.now();
+            await operation();
+            const end = performance.now();
+            measurements.push({
+                description,
+                duration: end - start
+            });
+        }
+
+        // First run - should generate and cache proofs
+        await measureOperation(async () => {
+            await check(0, 0);
+        }, "First run - no cache");
+
+        // Second run - should use cached proofs
+        await measureOperation(async () => {
+            await check(0, 0);
+        }, "Second run - with cache");
+
+        // Log performance results
+        console.log("\nPerformance measurements:");
+        measurements.forEach(m => {
+            console.log(`${m.description}: ${m.duration.toFixed(2)}ms`);
+        });
+
+        // Verify that second run was significantly faster
+        expect(measurements[1].duration).to.be.lessThan(measurements[0].duration);
+    }).timeout(1000000);
 });
