@@ -123,7 +123,7 @@ contract Node is BridgeManager {
         uint256 remoteCommitment, // commitment to send to dest chain
         uint256[8] memory nullifiers,
         ProofCommitment memory proof
-    ) external returns (uint256 remainderCommitment) {
+    ) external payable returns (uint256 remainderCommitment) {
         remainderCommitment = zkerc20._bridge(
             msg.sender,
             localCommitment,
