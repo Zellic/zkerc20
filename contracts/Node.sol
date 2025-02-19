@@ -102,7 +102,7 @@ contract Node is BridgeManager {
             // the token is not native to this chain.
             // we need to make a "fake" token
             address wrappedToken = _wrapToken(token);
-            IWZKERC20(wrappedToken).mint(address(this), amount);
+            IWZKERC20(wrappedToken).mint(msg.sender, amount);
         }
     }
 
