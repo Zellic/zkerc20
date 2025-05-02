@@ -1,5 +1,7 @@
 Deposit any ERC-20, and receive corresponding zkERC20 tokens. These can be transferred to any user and bridged to any chain — without revealing the token type, amount, or receiver.
 
+**WARNING:** This software has not been audited and is not intended for production use.
+
 # Usage
 
 Dependencies:
