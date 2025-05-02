@@ -1,6 +1,6 @@
 Deposit any ERC-20, and receive corresponding zkERC20 tokens. These can be transferred to any user and bridged to any chain — without revealing the token type, amount, or receiver.
 
-**WARNING:** This software has not been audited and is not intended for production use.
+**IMPORTANT DISCLAIMER**: This software has not been audited. It is intended to be a proof of concept, and is not production ready.
 
 # Usage
 
@@ -13,8 +13,6 @@ To install and run tests, in the cloned directory, simply run:
 ```bash
 make test
 ```
-
-**IMPORTANT DISCLAIMER**: This project is intended to be a proof of concept and is not production ready. Not all features are necessarily fully implemented or tested, and the code has not been audited.
 
 # Make any ERC-20 like Zcash
 
